@@ -3,11 +3,10 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from database.db import Base
 
+
 class User(Base):
 
-
-
-    #Δημιουργεία User Table
+    # Δημιουργία User Table
 
     __tablename__ = "users"
     __table_args__ = {"schema": "weddingplan"}

@@ -14,8 +14,6 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register", response_model=UserRegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserRegisterRequest, db: Session = Depends(get_session)):
 
-
-
     # Έλεγχος αν υπάρχει ήδη το email Ή το username
     user_exists = db.query(User).filter((User.email == user_data.email) | (User.username == user_data.username)).first()
     if user_exists:
@@ -55,14 +53,22 @@ def login(login_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depen
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Επαλήθευση κωδικού
-    if not verify_password(login_data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    try:
+        if not verify_password(login_data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Δημιουργία του JWT Token (βάζουμε το ID του χρήστη στο 'sub')
-    access_token = create_access_token(data={"sub": str(user.id)})
+        # Δημιουργία του JWT Token (βάζουμε το ID του χρήστη στο 'sub')
+        access_token = create_access_token(data={"sub": str(user.id)})
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail="Some error occurred during password verification"
+        )
 
-    return {
+    response = {
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60  # Μετατροπή λεπτών σε δευτερόλεπτα
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # Μετατροπή λεπτών σε δευτερόλεπτα
+        "role": user.role,
     }
+
+    return response

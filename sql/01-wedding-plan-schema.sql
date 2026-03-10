@@ -12,8 +12,7 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 
--- Clean slate: Drop existing schema if it exists to avoid conflicts
-DROP SCHEMA IF EXISTS weddingplan CASCADE;
+
 
 CREATE SCHEMA weddingplan;
 ALTER SCHEMA weddingplan OWNER TO postgres;
@@ -158,9 +157,12 @@ ALTER TABLE weddingplan.guests OWNER TO postgres;
 
 -- 1. USERS
 INSERT INTO weddingplan.users (id, role, username, email, password_hash, first_name, last_name) VALUES
-('c1111111-1111-1111-1111-111111111111', 'COUPLE', 'alice_and_john', 'alice@example.com', 'hashed_pass_123', 'Alice', 'Wonderland'),
-('b2222222-2222-2222-2222-222222222222', 'PARTNER', 'grand_venue', 'booking@grandvenue.gr', 'hashed_pass_456', 'Kostas', 'Pappas'),
-('b3333333-3333-3333-3333-333333333333', 'PARTNER', 'tasty_catering', 'info@tastycatering.gr', 'hashed_pass_789', 'Maria', 'Leka');
+-- Password --> hashed_pass_123
+('c1111111-1111-1111-1111-111111111111', 'COUPLE', 'alice_and_john', 'alice@example.com', '$2b$12$mEN25JX2khEZwxDCtnPu4uH7vfEFj.G92jR51Ym9L9cGTJ/3nVVh2', 'Alice', 'Wonderland'),
+-- Password --> hashed_pass_456
+('b2222222-2222-2222-2222-222222222222', 'PARTNER', 'grand_venue', 'booking@grandvenue.gr', '$2b$12$vzc8P28ntepLwqpqP6e8NeDggoBeNk0DCQbatWrneTJp7Fm.yDHwi', 'Kostas', 'Pappas'),
+-- Password --> hashed_pass_789
+('b3333333-3333-3333-3333-333333333333', 'PARTNER', 'tasty_catering', 'info@tastycatering.gr', '$2b$12$gJKuky.8bp61W595rOZCPueX0UtfEX6rluVYTBiG5p0P4W2RayLm2', 'Maria', 'Leka');
 
 -- 2. PARTNER PROFILES
 INSERT INTO weddingplan.partner_profiles (user_id, business_name, category, description) VALUES

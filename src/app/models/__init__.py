@@ -3,3 +3,5 @@ from .tasks import Tasks
 from .gifts import Gifts
 from .budget import Budget
 from .guests import Guests
+from .reservations import Reservations
+from .partner_profiles import PartnerProfiles
