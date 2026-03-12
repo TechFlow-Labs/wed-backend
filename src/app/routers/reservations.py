@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session, aliased
 from database.db import get_session
 from models import Reservations, User, PartnerProfiles
-from schemas.reservations import ReservationsSchema
+from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, ReservationsItemSchema
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
@@ -58,3 +58,19 @@ def get_pending_reservations(db: Session = Depends(get_session), current_user: U
     
     return reservations_pending
 
+
+@router.patch("/{reservation_id}", response_model=ReservationsItemSchema, status_code = status.HTTP_200_OK)
+def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpdateSchema, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+
+    db_reservation = db.query(Reservations).filter(Reservations.id == reservation_id, Reservations.partner_id == current_user.id).first()
+
+    if not db_reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    update_data = reservation_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_reservation, key, value)
+
+    db.commit()
+    db.refresh(db_reservation)
+    return db_reservation

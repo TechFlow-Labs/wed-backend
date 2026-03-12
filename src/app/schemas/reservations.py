@@ -4,26 +4,28 @@ from uuid import UUID
 from typing import List, Optional
 from decimal import Decimal
 
-
-
-class ReservationsSchema(BaseModel):
+class ReservationsItemSchema(BaseModel):
     id: UUID
-
     partner_id: UUID
-    business_name: Optional[str] = None
-
     couple_id: Optional[UUID] = None
-    couple_first_name: Optional[str] = None
-    couple_last_name: Optional[str] = None
-
     guest_first_name: Optional[str] =  None
     guest_last_name: Optional[str] =  None
     guest_email: Optional[str] = None
     guest_phone: Optional[str] = None
-
-    status: Optional[str]
-    event_date: Optional[datetime]
-    details: Optional[str]
-    budget_per_reservation: Optional[Decimal]
+    status: Optional[str] = None
+    event_date: Optional[datetime] = None
+    details: Optional[str] = None
+    budget_per_reservation: Optional[Decimal] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class ReservationsSchema(ReservationsItemSchema):
+    business_name: Optional[str] = None
+    couple_first_name: Optional[str] = None
+    couple_last_name: Optional[str] = None
+
+class ReservationsUpdateSchema(BaseModel):
+    status: Optional[str] = None
+    event_date: Optional[datetime] = None
+    details: Optional[str] = None
+    budget_per_reservation: Optional[Decimal] = None
