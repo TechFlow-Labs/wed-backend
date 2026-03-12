@@ -16,10 +16,10 @@ class ReservationsSchema(BaseModel):
     couple_first_name: Optional[str] = None
     couple_last_name: Optional[str] = None
 
-    guest_first_name: Optional[str]
-    guest_last_name: Optional[str]
-    guest_email: Optional[str]
-    guest_phone: Optional[str]
+    guest_first_name: Optional[str] =  None
+    guest_last_name: Optional[str] =  None
+    guest_email: Optional[str] = None
+    guest_phone: Optional[str] = None
 
     status: Optional[str]
     event_date: Optional[datetime]
