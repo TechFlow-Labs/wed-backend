@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi import APIRouter, status, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 from database.db import get_session
 from models import Reservations, User, PartnerProfiles
@@ -6,6 +6,7 @@ from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, R
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
+from utils.email_service import send_status_email
 
 router = APIRouter(prefix="/reservations", tags=["Reservations"])
 
@@ -60,17 +61,55 @@ def get_pending_reservations(db: Session = Depends(get_session), current_user: U
 
 
 @router.patch("/{reservation_id}", response_model=ReservationsItemSchema, status_code = status.HTTP_200_OK)
-def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpdateSchema, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpdateSchema, background_tasks: BackgroundTasks, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
 
-    db_reservation = db.query(Reservations).filter(Reservations.id == reservation_id, Reservations.partner_id == current_user.id).first()
+    try:
+        db_reservation = db.query(Reservations).filter(Reservations.id == reservation_id, Reservations.partner_id == current_user.id).first()
 
-    if not db_reservation:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        if not db_reservation:
+            raise HTTPException(status_code=404, detail="Reservation not found")
 
-    update_data = reservation_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_reservation, key, value)
+        update_data = reservation_update.model_dump(exclude_unset=True)
 
-    db.commit()
-    db.refresh(db_reservation)
+        new_status = update_data.get("status")
+        status_changed = new_status in ["ACCEPTED", "REJECTED"] and db_reservation.status != new_status
+        
+        print(f"NEW STATUS: {new_status}")
+
+        print(f"STATUS CHANGED: {status_changed}")
+
+        for key, value in update_data.items():
+            setattr(db_reservation, key, value)
+
+        db.commit()
+        db.refresh(db_reservation)
+
+        if status_changed:
+            recipient_email = None
+            
+            # Figure out who to email
+            if db_reservation.couple_id:
+                couple_user = db.query(User).filter(User.id == db_reservation.couple_id).first()
+                if couple_user:
+                    recipient_email = couple_user.email
+            elif db_reservation.guest_email:
+                recipient_email = db_reservation.guest_email
+
+            # Queue the email task
+            if recipient_email:
+                
+                # Format the date nicely, or provide a fallback string
+                formatted_date = db_reservation.event_date.strftime("%B %d, %Y") if db_reservation.event_date else "the requested date"
+                
+                background_tasks.add_task(
+                    send_status_email, 
+                    to_email=recipient_email, 
+                    vendor_name=current_user.username,
+                    event_date=formatted_date,
+                    new_status=new_status 
+                )
+                
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     return db_reservation
