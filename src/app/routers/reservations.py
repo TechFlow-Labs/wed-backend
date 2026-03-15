@@ -6,7 +6,7 @@ from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, R
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
-from utils.email_service import send_status_email
+from email_service.service import send_status_email
 
 router = APIRouter(prefix="/reservations", tags=["Reservations"])
 
@@ -73,10 +73,6 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
 
         new_status = update_data.get("status")
         status_changed = new_status in ["ACCEPTED", "REJECTED"] and db_reservation.status != new_status
-        
-        print(f"NEW STATUS: {new_status}")
-
-        print(f"STATUS CHANGED: {status_changed}")
 
         for key, value in update_data.items():
             setattr(db_reservation, key, value)
@@ -95,16 +91,20 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
             elif db_reservation.guest_email:
                 recipient_email = db_reservation.guest_email
 
-            # Queue the email task
+            business_name = db.query(
+                            PartnerProfiles.business_name
+                        ).join(
+                            User, PartnerProfiles.user_id == User.id
+                        ).filter(User.id==current_user.id).first()[0]
+
             if recipient_email:
-                
                 # Format the date nicely, or provide a fallback string
                 formatted_date = db_reservation.event_date.strftime("%B %d, %Y") if db_reservation.event_date else "the requested date"
                 
                 background_tasks.add_task(
                     send_status_email, 
                     to_email=recipient_email, 
-                    vendor_name=current_user.username,
+                    vendor_name=business_name,
                     event_date=formatted_date,
                     new_status=new_status 
                 )
