@@ -30,8 +30,7 @@ class ReservationsUpdateSchema(BaseModel):
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
 
-class ReservationCreateGuestSchema(BaseModel):
-    partner_id: UUID
+class ReservationAcceptedCreateSchema(BaseModel):
     guest_first_name: str  
     guest_last_name: str   
     guest_email: str       
@@ -39,6 +38,8 @@ class ReservationCreateGuestSchema(BaseModel):
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+class ReservationPendingCreateGuestSchema(ReservationAcceptedCreateSchema):
+    partner_id: UUID
 
 class ReservationPendingCreateSchema(BaseModel):
     partner_id: UUID

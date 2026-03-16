@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 from database.db import get_session
 from models import Reservations, User, PartnerProfiles
-from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, ReservationsItemSchema, ReservationCreateGuestSchema, ReservationPendingCreateSchema
+from schemas.reservations import *
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
@@ -115,7 +115,7 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/guest", response_model=ReservationsItemSchema, status_code=status.HTTP_201_CREATED)
-def create_guest_request_for_reservation(reservation_data: ReservationCreateGuestSchema, db: Session = Depends(get_session)):
+def create_guest_request_for_reservation(reservation_data: ReservationPendingCreateGuestSchema, db: Session = Depends(get_session)):
     
     try:
         partner_exists = db.query(User).filter(
@@ -176,6 +176,37 @@ def create_request_for_reservation(reservation_data: ReservationPendingCreateSch
             details=reservation_data.details,
             budget_per_reservation=reservation_data.budget_per_reservation,
             status="PENDING"
+        )
+
+        db.add(new_reservation)
+        db.commit()
+        db.refresh(new_reservation)
+        
+        return new_reservation
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/accepted", response_model=ReservationsItemSchema, status_code=status.HTTP_201_CREATED)
+def create_accepted_reservation(reservation_data: ReservationAcceptedCreateSchema, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    
+    try:
+
+        if current_user.role != "PARTNER":
+            raise HTTPException(status_code=403, detail="Role not authorized to create this type of reservation")
+
+        new_reservation = Reservations(
+            partner_id=current_user.id,
+            couple_id=None,
+            guest_first_name=reservation_data.guest_first_name,
+            guest_last_name=reservation_data.guest_last_name,
+            guest_email=reservation_data.guest_email,
+            guest_phone=reservation_data.guest_phone,
+            event_date=reservation_data.event_date,
+            details=reservation_data.details,
+            budget_per_reservation=reservation_data.budget_per_reservation,
+            status="ACCEPTED"
         )
 
         db.add(new_reservation)
