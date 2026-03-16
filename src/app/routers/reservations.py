@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 from database.db import get_session
 from models import Reservations, User, PartnerProfiles
-from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, ReservationsItemSchema, ReservationCreateGuestSchema
+from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, ReservationsItemSchema, ReservationCreateGuestSchema, ReservationPendingCreateSchema
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
@@ -54,11 +54,11 @@ def get_pending_reservations(db: Session = Depends(get_session), current_user: U
             reservations_pending = query.filter(Reservations.partner_id == current_user.id, Reservations.status == "PENDING").all()
         else:
             raise HTTPException(status_code=400, detail="User Role not recognized")
+        
+        return reservations_pending
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    return reservations_pending
-
 
 @router.patch("/{reservation_id}", response_model=ReservationsItemSchema, status_code = status.HTTP_200_OK)
 def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpdateSchema, background_tasks: BackgroundTasks, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
@@ -109,14 +109,13 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
                     new_status=new_status 
                 )
                 
+            return db_reservation
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return db_reservation
-
-
 @router.post("/guest", response_model=ReservationsItemSchema, status_code=status.HTTP_201_CREATED)
-def create_guest_reservation(reservation_data: ReservationCreateGuestSchema, db: Session = Depends(get_session)):
+def create_guest_request_for_reservation(reservation_data: ReservationCreateGuestSchema, db: Session = Depends(get_session)):
     
     try:
         partner_exists = db.query(User).filter(
@@ -144,7 +143,46 @@ def create_guest_reservation(reservation_data: ReservationCreateGuestSchema, db:
         db.commit()
         db.refresh(new_reservation)
         
+        return new_reservation
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-    return new_reservation
+
+@router.post("/pending", response_model=ReservationsItemSchema, status_code=status.HTTP_201_CREATED)
+def create_request_for_reservation(reservation_data: ReservationPendingCreateSchema, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    
+    try:
+
+        if current_user.role != "COUPLE":
+            raise HTTPException(status_code=403, detail="Role not authorized to create this type of reservation")
+
+        partner_exists = db.query(User).filter(
+            User.id == reservation_data.partner_id, 
+            User.role == 'PARTNER'
+        ).first()
+        
+        if not partner_exists:
+            raise HTTPException(status_code=404, detail="Vendor not found")
+
+        new_reservation = Reservations(
+            partner_id=reservation_data.partner_id,
+            couple_id=current_user.id,
+            guest_first_name=None,
+            guest_last_name=None,
+            guest_email=None,
+            guest_phone=None,
+            event_date=reservation_data.event_date,
+            details=reservation_data.details,
+            budget_per_reservation=reservation_data.budget_per_reservation,
+            status="PENDING"
+        )
+
+        db.add(new_reservation)
+        db.commit()
+        db.refresh(new_reservation)
+        
+        return new_reservation
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

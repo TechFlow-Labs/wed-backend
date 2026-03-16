@@ -39,3 +39,9 @@ class ReservationCreateGuestSchema(BaseModel):
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+
+class ReservationPendingCreateSchema(BaseModel):
+    partner_id: UUID
+    event_date: Optional[datetime] = None
+    details: Optional[str] = None
+    budget_per_reservation: Optional[Decimal] = None
