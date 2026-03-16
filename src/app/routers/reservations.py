@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 from database.db import get_session
 from models import Reservations, User, PartnerProfiles
-from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, ReservationsItemSchema
+from schemas.reservations import ReservationsSchema, ReservationsUpdateSchema, ReservationsItemSchema, ReservationCreateGuestSchema
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
@@ -113,3 +113,38 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
         raise HTTPException(status_code=500, detail=str(e))
 
     return db_reservation
+
+
+@router.post("/guest", response_model=ReservationsItemSchema, status_code=status.HTTP_201_CREATED)
+def create_guest_reservation(reservation_data: ReservationCreateGuestSchema, db: Session = Depends(get_session)):
+    
+    try:
+        partner_exists = db.query(User).filter(
+            User.id == reservation_data.partner_id, 
+            User.role == 'PARTNER'
+        ).first()
+        
+        if not partner_exists:
+            raise HTTPException(status_code=404, detail="Vendor not found")
+
+        new_reservation = Reservations(
+            partner_id=reservation_data.partner_id,
+            couple_id=None,
+            guest_first_name=reservation_data.guest_first_name,
+            guest_last_name=reservation_data.guest_last_name,
+            guest_email=reservation_data.guest_email,
+            guest_phone=reservation_data.guest_phone,
+            event_date=reservation_data.event_date,
+            details=reservation_data.details,
+            budget_per_reservation=reservation_data.budget_per_reservation,
+            status="PENDING"
+        )
+
+        db.add(new_reservation)
+        db.commit()
+        db.refresh(new_reservation)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return new_reservation

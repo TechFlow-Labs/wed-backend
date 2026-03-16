@@ -29,3 +29,13 @@ class ReservationsUpdateSchema(BaseModel):
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+
+class ReservationCreateGuestSchema(BaseModel):
+    partner_id: UUID
+    guest_first_name: str  
+    guest_last_name: str   
+    guest_email: str       
+    guest_phone: Optional[str] = None
+    event_date: Optional[datetime] = None
+    details: Optional[str] = None
+    budget_per_reservation: Optional[Decimal] = None
