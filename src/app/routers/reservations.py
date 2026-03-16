@@ -60,6 +60,57 @@ def get_pending_reservations(db: Session = Depends(get_session), current_user: U
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/accepted", response_model = List[ReservationsSchema], status_code = status.HTTP_200_OK)
+def get_accepted_reservations(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+
+    try:
+
+        PartnerUser = aliased(User)
+        CoupleUser = aliased(User)
+
+        query = db.query(
+                Reservations.id,
+                Reservations.status,
+                Reservations.event_date,
+                Reservations.details,
+                Reservations.budget_per_reservation,
+                
+                # Partner Info
+                PartnerUser.id.label("partner_id"),
+                PartnerProfiles.business_name,
+                
+                # Couple Info
+                CoupleUser.id.label("couple_id"),
+                CoupleUser.first_name.label("couple_first_name"),
+                CoupleUser.last_name.label("couple_last_name"),
+                
+                # Guest Info (in case couple_id is null)
+                Reservations.guest_first_name,
+                Reservations.guest_last_name,
+                Reservations.guest_email,
+                Reservations.guest_phone
+            ).join(
+                PartnerUser, Reservations.partner_id == PartnerUser.id # 1st Join: Get Partner
+            ).outerjoin(
+                PartnerProfiles, PartnerUser.id == PartnerProfiles.user_id # 2nd Join: Get Business Name
+            ).outerjoin(
+                CoupleUser, Reservations.couple_id == CoupleUser.id # 3rd Join: Get Couple (Outer join because it might be a guest!)
+            )
+        
+        if current_user.role == "COUPLE":
+            reservations_accepted = query.filter(Reservations.couple_id == current_user.id, Reservations.status == "ACCEPTED").all()
+        elif current_user.role == "PARTNER":
+            reservations_accepted = query.filter(Reservations.partner_id == current_user.id, Reservations.status == "ACCEPTED").all()
+        else:
+            raise HTTPException(status_code=400, detail="User Role not recognized")
+        
+        return reservations_accepted
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.patch("/{reservation_id}", response_model=ReservationsItemSchema, status_code = status.HTTP_200_OK)
 def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpdateSchema, background_tasks: BackgroundTasks, db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
 
