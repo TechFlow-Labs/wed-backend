@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database.db import get_session
-from schemas.schemas import DashboardResponse
+from schemas.dashboard import DashboardResponse
 from utils.security import get_current_user
 from models import User, Tasks, Gifts, Budget, Guests
 

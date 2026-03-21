@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database.db import get_session
 from models import Budget, User
-from schemas.schemas import BudgetUpdate, BudgetDashboard
+from schemas.budget import BudgetUpdate, BudgetDashboard
 from utils.security import get_current_user
 from typing import List
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database.db import get_session
 from models import Guests, User
-from schemas.schemas import GuestCreate, GuestDashboard
+from schemas.guests import GuestCreate, GuestDashboard
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
