@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import auth, dashboard, tasks, gifts, guests, budget, reservations, vendors
+from routers import auth, dashboard, tasks, gifts, guests, budget, reservations, vendors, notes
 
 app = FastAPI(title="Wedding Plan API", version="1.0")
 
@@ -11,3 +11,4 @@ app.include_router(guests.router)
 app.include_router(budget.router)
 app.include_router(reservations.router)
 app.include_router(vendors.router)
+app.include_router(notes.router)

@@ -4,6 +4,7 @@ from uuid import UUID
 from typing import List, Optional
 from decimal import Decimal
 from schemas.guests import GuestDashboard
+from schemas.notes import NoteReservationsSchema
 
 class ReservationsItemSchema(BaseModel):
     id: UUID
@@ -24,8 +25,9 @@ class ReservationsSchema(ReservationsItemSchema):
     business_name: Optional[str] = None
     couple_first_name: Optional[str] = None
     couple_last_name: Optional[str] = None
-    guests: List[GuestDashboard] = []
 
+    guests: List[GuestDashboard] = []
+    notes: List[NoteReservationsSchema] = []
 class ReservationsUpdateSchema(BaseModel):
     status: Optional[str] = None
     event_date: Optional[datetime] = None

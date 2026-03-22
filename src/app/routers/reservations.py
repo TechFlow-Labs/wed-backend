@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 from database.db import get_session
 from collections import defaultdict
-from models import Reservations, User, PartnerProfiles, Guests
+from models import Reservations, User, PartnerProfiles, Guests, Notes
 from schemas.reservations import *
 from utils.security import get_current_user
 from typing import List
@@ -114,24 +114,37 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
         reservation_ids = [res.id for res in reservations_accepted]
         
         
-        # BATCH FETCH GUESTS
-        # Run ONE fast query to get all guests belonging to these reservations
+        # -----------------------------------------
+        # 1. BATCH FETCH GUESTS
+        # -----------------------------------------
         guests = db.query(Guests).filter(Guests.reservation_id.in_(reservation_ids)).all()
 
-        # Group the guests by reservation_id for ultra-fast lookup
         guests_by_res = defaultdict(list)
         for guest in guests:
             guests_by_res[guest.reservation_id].append(guest)
 
-        # MERGE DATA
-        # Since SQLAlchemy rows are read-only tuples, we convert them to dictionaries 
-        # so we can append the guests list before sending it to Pydantic
+        # -----------------------------------------
+        # 2. BATCH FETCH NOTES (NEW)
+        # -----------------------------------------
+        notes = db.query(Notes).filter(
+            Notes.reservation_id.in_(reservation_ids),
+            Notes.author_id == current_user.id
+        ).order_by(Notes.updated_at.desc()).all()
+
+        notes_by_res = defaultdict(list)
+        for note in notes:
+            notes_by_res[note.reservation_id].append(note)
+
+        # -----------------------------------------
+        # 3. MERGE DATA
+        # -----------------------------------------
         final_results = []
         for res in reservations_accepted:
-            # Convert SQLAlchemy Row to a standard Python dictionary
             res_dict = dict(res._mapping) 
-            # Attach the guests (or an empty list if there are none)
+            
             res_dict["guests"] = guests_by_res.get(res.id, [])
+            res_dict["notes"] = notes_by_res.get(res.id, []) # <-- NEW
+            
             final_results.append(res_dict)
 
         return final_results
