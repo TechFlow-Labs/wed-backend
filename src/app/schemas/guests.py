@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from typing import Optional
 
@@ -9,8 +9,8 @@ class GuestDashboard(BaseModel):
     email: Optional[str]
     phone_number: Optional[str]
     reservation_id: Optional[UUID] = None
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 class GuestCreate(BaseModel):
     first_name: str

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, status, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session, aliased
 from database.db import get_session
-from models import Reservations, User, PartnerProfiles
+from collections import defaultdict
+from models import Reservations, User, PartnerProfiles, Guests
 from schemas.reservations import *
 from utils.security import get_current_user
 from typing import List
@@ -66,6 +67,7 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
 
     try:
 
+        # BASE QUERY
         PartnerUser = aliased(User)
         CoupleUser = aliased(User)
 
@@ -105,7 +107,34 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
         else:
             raise HTTPException(status_code=400, detail="User Role not recognized")
         
-        return reservations_accepted
+        if not reservations_accepted:
+            return []
+
+        # Extract all the reservation IDs we just found
+        reservation_ids = [res.id for res in reservations_accepted]
+        
+        
+        # BATCH FETCH GUESTS
+        # Run ONE fast query to get all guests belonging to these reservations
+        guests = db.query(Guests).filter(Guests.reservation_id.in_(reservation_ids)).all()
+
+        # Group the guests by reservation_id for ultra-fast lookup
+        guests_by_res = defaultdict(list)
+        for guest in guests:
+            guests_by_res[guest.reservation_id].append(guest)
+
+        # MERGE DATA
+        # Since SQLAlchemy rows are read-only tuples, we convert them to dictionaries 
+        # so we can append the guests list before sending it to Pydantic
+        final_results = []
+        for res in reservations_accepted:
+            # Convert SQLAlchemy Row to a standard Python dictionary
+            res_dict = dict(res._mapping) 
+            # Attach the guests (or an empty list if there are none)
+            res_dict["guests"] = guests_by_res.get(res.id, [])
+            final_results.append(res_dict)
+
+        return final_results
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
