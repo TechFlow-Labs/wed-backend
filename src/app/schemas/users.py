@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
 from uuid import UUID
 from typing import Optional
@@ -34,11 +34,30 @@ class Token(BaseModel):
     expires_in: int
     role: str
 
-class UserDashboard(BaseModel):
+class UserProfileResponseSchema(BaseModel):
+    # Base User Fields
     id: UUID
-    first_name: Optional[str]
-    last_name: Optional[str]
-    email: str
     role: str
-    class Config:
-        from_attributes = True
+    username: str
+    email: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    
+    # Partner Profile Fields (Optional, so Couples don't break the schema)
+    business_name: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserProfileUpdateSchema(BaseModel):
+    # Base User Fields
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    
+    # Partner Profile Fields
+    business_name: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
