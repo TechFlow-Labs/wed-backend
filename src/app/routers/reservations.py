@@ -143,7 +143,7 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
             res_dict = dict(res._mapping) 
             
             res_dict["guests"] = guests_by_res.get(res.id, [])
-            res_dict["notes"] = notes_by_res.get(res.id, []) # <-- NEW
+            res_dict["notes"] = notes_by_res.get(res.id, [])
             
             final_results.append(res_dict)
 

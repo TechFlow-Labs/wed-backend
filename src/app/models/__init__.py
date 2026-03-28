@@ -6,3 +6,4 @@ from .guests import Guests
 from .reservations import Reservations
 from .partner_profiles import PartnerProfiles
 from .notes import Notes
+from .partner_expenses import PartnerExpenses

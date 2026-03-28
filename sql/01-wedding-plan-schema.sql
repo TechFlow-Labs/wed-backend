@@ -151,6 +151,20 @@ CREATE TABLE weddingplan.guests (
 
 ALTER TABLE weddingplan.guests OWNER TO postgres;
 
+
+-- 9. PARTNER EXPENSES
+CREATE TABLE weddingplan.partner_expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    partner_id UUID NOT NULL REFERENCES weddingplan.users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,        -- e.g., "Facebook Ads", "Camera Repair"
+    amount DECIMAL(12, 2) NOT NULL,
+    category VARCHAR(100),              -- e.g., "Marketing", "Equipment", "Travel"
+    expense_date DATE DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE weddingplan.partner_expenses  OWNER TO postgres
+
 -- ==========================================
 -- DUMMY DATA INSERTS
 -- ==========================================
@@ -197,3 +211,8 @@ INSERT INTO weddingplan.gifts (user_id, item_name, category, short_description) 
 INSERT INTO weddingplan.guests (user_id, reservation_id, first_name, last_name, email, phone_number) VALUES
 ('c1111111-1111-1111-1111-111111111111', 'd1111111-1111-1111-1111-111111111111', 'Eleni', 'Papadopoulou', 'eleni@test.gr', '6911111111'),
 ('c1111111-1111-1111-1111-111111111111', NULL, 'Dimitris', 'Antoniou', 'dimitris@test.gr', '6922222222');
+
+-- 9. PARTNER EXPENSES
+INSERT INTO weddingplan.partner_expenses  (partner_id, title, amount, category, expense_date) VALUES 
+('b2222222-2222-2222-2222-222222222222', 'Instagram Sponsored Ads - Spring Campaign', 150.00, 'Marketing', '2026-03-01'),
+('b2222222-2222-2222-2222-222222222222', 'Bridal Expo Booth Registration', 450.00, 'Marketing', '2026-03-15');
