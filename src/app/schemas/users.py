@@ -10,7 +10,6 @@ class UserRegisterRequest(BaseModel):
     first_name: str
     last_name: str
     password: str
-    role: Optional[str] = "COUPLE"
 
 # Απάντηση που επιστρέφουμε εμεις
 class UserRegisterResponse(BaseModel):
@@ -61,3 +60,25 @@ class UserProfileUpdateSchema(BaseModel):
     business_name: Optional[str] = None
     category: Optional[str] = None
     description: Optional[str] = None
+
+class VendorCreateRequest(BaseModel):
+    # User fields
+    username: str
+    email: str
+    password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    
+    # Partner Profile fields
+    business_name: str
+    category: Optional[str] = None
+    description: Optional[str] = None
+
+class VendorCreateResponse(BaseModel):
+    id: UUID
+    username: str
+    email: str
+    role: str
+    business_name: str
+    
+    model_config = ConfigDict(from_attributes=True)
