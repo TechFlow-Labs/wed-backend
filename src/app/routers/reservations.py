@@ -202,8 +202,7 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
                     new_status=new_status 
                 )
                 
-            return db_reservation
-        
+        return db_reservation
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
