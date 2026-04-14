@@ -1,0 +1,61 @@
+version: '3'
+services:
+  wedding-plan-database-local:
+    image: "postgres:15-alpine"
+    hostname: wedding-plan-database-prod
+    container_name: wedding-plan-database-prod
+    env_file:
+      - config/config_db_prod.env
+    volumes:
+      - ./sql/01-wedding-plan-schema-prod.sql:/docker-entrypoint-initdb.d/01-pg-schema.sql
+      - wedding-plan-database-prod:/var/lib/postgresql/data
+
+    ports:
+      - "5492:5432"
+    networks:
+      local_sandbox_2:
+        ipv4_address: 172.27.0.70
+
+    labels:
+      wedding.plan.prod: "database"
+
+  wedding-plan-api-prod:
+    build:
+      context: ./src/app/
+      dockerfile: Dockerfile.api_prod
+    hostname: wedding-plan-api-prod
+    container_name: wedding-plan-api-prod
+    env_file:
+      - config/config_api_prod.env
+    ports:
+      - 8002:8000
+    networks:
+      local_sandbox_2:
+        ipv4_address: 172.27.0.75
+    labels:
+      wedding.plan.prod: "api"
+    tty: true
+
+  wedding-plan-nginx-prod:
+    build: ./nginx/prod/
+    hostname: wedding-plan-nginx-prod
+    container_name: wedding-plan-nginx-prod
+    ports:
+      - "8060:8050"
+    depends_on:
+      - wedding-plan-api-prod
+    networks:
+      local_sandbox_2:
+        ipv4_address: 172.27.0.77
+    labels:
+      wedding.plan.prod: "nginx"
+    tty: true
+
+volumes:
+  wedding-plan-database-prod:
+    driver: local
+
+networks:
+  local_sandbox_2:
+    external: true
+    name: local_sandbox_2
