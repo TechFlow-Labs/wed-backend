@@ -8,6 +8,7 @@ services:
       - config/config_db_local.env
     volumes:
       - ./sql/01-wedding-plan-schema.sql:/docker-entrypoint-initdb.d/01-pg-schema.sql
+      - ./sql/02-blog-posts.sql:/docker-entrypoint-initdb.d/02-blog-posts.sql
       - wedding-plan-database-local:/var/lib/postgresql/data
 
     ports:

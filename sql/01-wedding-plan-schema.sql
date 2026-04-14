@@ -163,7 +163,7 @@ CREATE TABLE weddingplan.partner_expenses (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE weddingplan.partner_expenses  OWNER TO postgres
+ALTER TABLE weddingplan.partner_expenses  OWNER TO postgres;
 
 -- ==========================================
 -- DUMMY DATA INSERTS
