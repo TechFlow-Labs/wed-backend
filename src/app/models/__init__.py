@@ -7,3 +7,4 @@ from .reservations import Reservations
 from .partner_profiles import PartnerProfiles
 from .notes import Notes
 from .partner_expenses import PartnerExpenses
+from .blog import BlogPost
