@@ -12,6 +12,15 @@ from email_service.service import send_status_email
 router = APIRouter(prefix="/reservations", tags=["Reservations"])
 
 
+def _email_event_label(db_reservation: Reservations) -> str:
+    """Prefer confirmed event_date; fall back to interested_dates text for notifications."""
+    if db_reservation.event_date:
+        return db_reservation.event_date.strftime("%B %d, %Y")
+    if db_reservation.interested_dates:
+        return db_reservation.interested_dates
+    return "the requested date"
+
+
 @router.get("/pending", response_model = List[ReservationsSchema], status_code = status.HTTP_200_OK)
 def get_pending_reservations(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
 
@@ -198,13 +207,11 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
                         ).filter(User.id==current_user.id).first()[0]
 
             if recipient_email:
-                formatted_date = db_reservation.event_date.strftime("%B %d, %Y") if db_reservation.event_date else "the requested date"
-                
                 background_tasks.add_task(
                     send_status_email, 
                     to_email=recipient_email, 
                     vendor_name=business_name,
-                    event_date=formatted_date,
+                    event_date=_email_event_label(db_reservation),
                     new_status=new_status 
                 )
                 
@@ -277,6 +284,10 @@ def create_request_for_reservation(reservation_data: ReservationPendingCreateSch
             event_date=reservation_data.event_date,
             details=reservation_data.details,
             budget_per_reservation=reservation_data.budget_per_reservation,
+            interested_dates=reservation_data.interested_dates,
+            guest_count=reservation_data.guest_count,
+            event_type=reservation_data.event_type,
+            other_comments=reservation_data.other_comments,
             status="PENDING"
         )
 
@@ -308,6 +319,10 @@ def create_accepted_reservation(reservation_data: ReservationAcceptedCreateSchem
             event_date=reservation_data.event_date,
             details=reservation_data.details,
             budget_per_reservation=reservation_data.budget_per_reservation,
+            interested_dates=reservation_data.interested_dates,
+            guest_count=reservation_data.guest_count,
+            event_type=reservation_data.event_type,
+            other_comments=reservation_data.other_comments,
             status="ACCEPTED"
         )
 

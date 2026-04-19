@@ -38,6 +38,10 @@ class ReservationsUpdateSchema(BaseModel):
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+    interested_dates: Optional[str] = None
+    guest_count: Optional[int] = None
+    event_type: Optional[str] = None
+    other_comments: Optional[str] = None
 
 class ReservationAcceptedCreateSchema(BaseModel):
     guest_first_name: str  
@@ -60,3 +64,7 @@ class ReservationPendingCreateSchema(BaseModel):
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+    interested_dates: Optional[str] = None
+    guest_count: Optional[int] = None
+    event_type: Optional[str] = None
+    other_comments: Optional[str] = None
