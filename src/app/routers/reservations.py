@@ -26,6 +26,10 @@ def get_pending_reservations(db: Session = Depends(get_session), current_user: U
                 Reservations.event_date,
                 Reservations.details,
                 Reservations.budget_per_reservation,
+                Reservations.interested_dates,
+                Reservations.guest_count,
+                Reservations.event_type,
+                Reservations.other_comments,
                 
                 # Partner Info
                 PartnerUser.id.label("partner_id"),
@@ -42,11 +46,11 @@ def get_pending_reservations(db: Session = Depends(get_session), current_user: U
                 Reservations.guest_email,
                 Reservations.guest_phone
             ).join(
-                PartnerUser, Reservations.partner_id == PartnerUser.id # 1st Join: Get Partner
+                PartnerUser, Reservations.partner_id == PartnerUser.id
             ).outerjoin(
-                PartnerProfiles, PartnerUser.id == PartnerProfiles.user_id # 2nd Join: Get Business Name
+                PartnerProfiles, PartnerUser.id == PartnerProfiles.user_id
             ).outerjoin(
-                CoupleUser, Reservations.couple_id == CoupleUser.id # 3rd Join: Get Couple (Outer join because it might be a guest!)
+                CoupleUser, Reservations.couple_id == CoupleUser.id
             )
         
         if current_user.role == "COUPLE":
@@ -77,6 +81,10 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
                 Reservations.event_date,
                 Reservations.details,
                 Reservations.budget_per_reservation,
+                Reservations.interested_dates,
+                Reservations.guest_count,
+                Reservations.event_type,
+                Reservations.other_comments,
                 
                 # Partner Info
                 PartnerUser.id.label("partner_id"),
@@ -93,11 +101,11 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
                 Reservations.guest_email,
                 Reservations.guest_phone
             ).join(
-                PartnerUser, Reservations.partner_id == PartnerUser.id # 1st Join: Get Partner
+                PartnerUser, Reservations.partner_id == PartnerUser.id
             ).outerjoin(
-                PartnerProfiles, PartnerUser.id == PartnerProfiles.user_id # 2nd Join: Get Business Name
+                PartnerProfiles, PartnerUser.id == PartnerProfiles.user_id
             ).outerjoin(
-                CoupleUser, Reservations.couple_id == CoupleUser.id # 3rd Join: Get Couple (Outer join because it might be a guest!)
+                CoupleUser, Reservations.couple_id == CoupleUser.id
             )
         
         if current_user.role == "COUPLE":
@@ -124,7 +132,7 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
             guests_by_res[guest.reservation_id].append(guest)
 
         # -----------------------------------------
-        # 2. BATCH FETCH NOTES (NEW)
+        # 2. BATCH FETCH NOTES
         # -----------------------------------------
         notes = db.query(Notes).filter(
             Notes.reservation_id.in_(reservation_ids),
@@ -176,7 +184,6 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
         if status_changed:
             recipient_email = None
             
-            # Figure out who to email
             if db_reservation.couple_id:
                 couple_user = db.query(User).filter(User.id == db_reservation.couple_id).first()
                 if couple_user:
@@ -191,7 +198,6 @@ def update_reservation(reservation_id: UUID, reservation_update: ReservationsUpd
                         ).filter(User.id==current_user.id).first()[0]
 
             if recipient_email:
-                # Format the date nicely, or provide a fallback string
                 formatted_date = db_reservation.event_date.strftime("%B %d, %Y") if db_reservation.event_date else "the requested date"
                 
                 background_tasks.add_task(
@@ -228,6 +234,10 @@ def create_guest_request_for_reservation(reservation_data: ReservationPendingCre
             event_date=reservation_data.event_date,
             details=reservation_data.details,
             budget_per_reservation=reservation_data.budget_per_reservation,
+            interested_dates=reservation_data.interested_dates,
+            guest_count=reservation_data.guest_count,
+            event_type=reservation_data.event_type,
+            other_comments=reservation_data.other_comments,
             status="PENDING"
         )
 
