@@ -25,7 +25,8 @@ def get_public_vendors(
         ).join(
             PartnerProfiles, User.id == PartnerProfiles.user_id
         ).filter(
-            User.role == 'PARTNER'
+            User.role == 'PARTNER',
+            User.username != 'demo-partner'
         )
 
 
