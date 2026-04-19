@@ -80,6 +80,10 @@ CREATE TABLE weddingplan.reservations (
     event_date TIMESTAMPTZ,
     details TEXT,
     budget_per_reservation DECIMAL(12, 2) DEFAULT 0.00,
+    interested_dates TEXT,
+    guest_count INTEGER,
+    event_type VARCHAR(100),
+    other_comments TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

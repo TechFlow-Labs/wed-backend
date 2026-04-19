@@ -10,14 +10,18 @@ class ReservationsItemSchema(BaseModel):
     id: UUID
     partner_id: UUID
     couple_id: Optional[UUID] = None
-    guest_first_name: Optional[str] =  None
-    guest_last_name: Optional[str] =  None
+    guest_first_name: Optional[str] = None
+    guest_last_name: Optional[str] = None
     guest_email: Optional[str] = None
     guest_phone: Optional[str] = None
     status: Optional[str] = None
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+    interested_dates: Optional[str] = None
+    guest_count: Optional[int] = None
+    event_type: Optional[str] = None
+    other_comments: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,11 +32,16 @@ class ReservationsSchema(ReservationsItemSchema):
 
     guests: List[GuestDashboard] = []
     notes: List[NoteReservationsSchema] = []
+
 class ReservationsUpdateSchema(BaseModel):
     status: Optional[str] = None
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+    interested_dates: Optional[str] = None
+    guest_count: Optional[int] = None
+    event_type: Optional[str] = None
+    other_comments: Optional[str] = None
 
 class ReservationAcceptedCreateSchema(BaseModel):
     guest_first_name: str  
@@ -42,6 +51,11 @@ class ReservationAcceptedCreateSchema(BaseModel):
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+    interested_dates: Optional[str] = None
+    guest_count: Optional[int] = None
+    event_type: Optional[str] = None
+    other_comments: Optional[str] = None
+
 class ReservationPendingCreateGuestSchema(ReservationAcceptedCreateSchema):
     partner_id: UUID
 
@@ -50,3 +64,7 @@ class ReservationPendingCreateSchema(BaseModel):
     event_date: Optional[datetime] = None
     details: Optional[str] = None
     budget_per_reservation: Optional[Decimal] = None
+    interested_dates: Optional[str] = None
+    guest_count: Optional[int] = None
+    event_type: Optional[str] = None
+    other_comments: Optional[str] = None

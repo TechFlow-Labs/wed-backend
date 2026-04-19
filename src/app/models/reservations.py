@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Numeric, func
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Numeric, func, Integer
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from database.db import Base 
@@ -18,6 +18,10 @@ class Reservations(Base):
     status = Column(String(50), server_default="PENDING", nullable=True)
     event_date = Column(DateTime(timezone=True), nullable=True)
     details = Column(Text, nullable=True)
-    budget_per_reservation =  Column(Numeric(12, 2), nullable=True)
+    budget_per_reservation = Column(Numeric(12, 2), nullable=True)
+    interested_dates = Column(Text, nullable=True)
+    guest_count = Column(Integer, nullable=True)
+    event_type = Column(String(100), nullable=True)
+    other_comments = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(),nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

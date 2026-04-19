@@ -76,10 +76,14 @@ CREATE TABLE weddingplan.reservations (
     guest_last_name VARCHAR(100),
     guest_email VARCHAR(255),
     guest_phone VARCHAR(50),
-    status VARCHAR(50) DEFAULT 'PENDING', -- 'PENDING', 'ACCEPTED', 'DENIED'
+    status VARCHAR(50) DEFAULT 'PENDING', -- 'PENDING', 'ACCEPTED', 'REJECTED'
     event_date TIMESTAMPTZ,
     details TEXT,
     budget_per_reservation DECIMAL(12, 2) DEFAULT 0.00,
+    interested_dates TEXT,
+    guest_count INTEGER,
+    event_type VARCHAR(100),
+    other_comments TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -216,3 +220,14 @@ INSERT INTO weddingplan.guests (user_id, reservation_id, first_name, last_name, 
 INSERT INTO weddingplan.partner_expenses  (partner_id, title, amount, category, expense_date) VALUES 
 ('b2222222-2222-2222-2222-222222222222', 'Instagram Sponsored Ads - Spring Campaign', 150.00, 'Marketing', '2026-03-01'),
 ('b2222222-2222-2222-2222-222222222222', 'Bridal Expo Booth Registration', 450.00, 'Marketing', '2026-03-15');
+
+-- ==========================================
+-- MIGRATIONS
+-- ==========================================
+
+-- Add new guest form fields to reservations
+ALTER TABLE weddingplan.reservations
+  ADD COLUMN IF NOT EXISTS interested_dates TEXT,
+  ADD COLUMN IF NOT EXISTS guest_count      INTEGER,
+  ADD COLUMN IF NOT EXISTS event_type       VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS other_comments   TEXT;
