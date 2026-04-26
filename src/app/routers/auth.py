@@ -32,27 +32,32 @@ def register(user_data: UserRegisterRequest, db: Session = Depends(get_session))
         role="COUPLE"
     )
 
-    # Αποθήκευση στη βάση
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user) # Παίρνουμε πίσω το ID και το CreatedAt που έφτιαξε η βάση
+    # Αποθήκευση στη βάση με error handling
+    try:
+        db.add(new_user)
+        db.flush() # Παίρνουμε πίσω το ID που έφτιαξε η βάση
 
-
-    # -------------------------------------------------------------------
-    # LINK PAST GUEST RESERVATIONS
-    # Find any reservations made with this email before they registered,
-    # and link them to this newly created user ID.
-    # -------------------------------------------------------------------
-    db.query(Reservations).filter(
-        Reservations.guest_email == new_user.email,
-        Reservations.couple_id.is_(None) # Safety check: Only claim unassigned ones
-    ).update(
-        {"couple_id": new_user.id}, 
-        synchronize_session=False
-    )
-    
-    # Commit the updates to the reservations table
-    db.commit()
+        # -------------------------------------------------------------------
+        # LINK PAST GUEST RESERVATIONS
+        # Find any reservations made with this email before they registered,
+        # and link them to this newly created user ID.
+        # -------------------------------------------------------------------
+        db.query(Reservations).filter(
+            Reservations.guest_email == new_user.email,
+            Reservations.couple_id.is_(None) # Safety check: Only claim unassigned ones
+        ).update(
+            {"couple_id": new_user.id}, 
+            synchronize_session=False
+        )
+        
+        # Commit the updates to the reservations table
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="An error occurred during registration"
+        )
     # -------------------------------------------------------------------
 
     return new_user
@@ -86,28 +91,35 @@ def create_vendor_account(vendor_data: VendorCreateRequest, db: Session = Depend
         password_hash=hashed_pwd,
         first_name=vendor_data.first_name,
         last_name=vendor_data.last_name,
-        role="PARTNER" # Hardcoded, so the admin can't accidentally make another admin
+        role="VENDOR" # Hardcoded, so the admin can't accidentally make another admin
     )
 
-    db.add(new_user)
-    
-    # flush() pushes the new user to PostgreSQL to generate the UUID, 
-    # but it DOES NOT permanently save (commit) it yet. 
-    # If anything fails after this point, the whole process rolls back!
-    db.flush() 
+    try:
+        db.add(new_user)
+        
+        # flush() pushes the new user to PostgreSQL to generate the UUID, 
+        # but it DOES NOT permanently save (commit) it yet. 
+        # If anything fails after this point, the whole process rolls back!
+        db.flush() 
 
-    # 5. Create the linked Partner Profile using the brand new ID
-    new_profile = PartnerProfiles(
-        user_id=new_user.id,
-        business_name=vendor_data.business_name,
-        category=vendor_data.category,
-        description=vendor_data.description
-    )
-    
-    db.add(new_profile)
+        # 5. Create the linked Partner Profile using the brand new ID
+        new_profile = PartnerProfiles(
+            user_id=new_user.id,
+            business_name=vendor_data.business_name,
+            category=vendor_data.category,
+            description=vendor_data.description
+        )
+        
+        db.add(new_profile)
 
-    # 6. Commit BOTH records permanently to the database
-    db.commit()
+        # 6. Commit BOTH records permanently to the database
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while creating the vendor account."
+        )
     
     # 7. Return a custom response dictionary combining the data
     return {
@@ -122,25 +134,25 @@ def create_vendor_account(vendor_data: VendorCreateRequest, db: Session = Depend
 @router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
 def login(login_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_session)):
 
-   # Endpoint για το Login. Δέχεται Form Data (για το Swagger) και επιστρέφει JWT Token.
+    # Endpoint για το Login. Δέχεται Form Data (για το Swagger) και επιστρέφει JWT Token.
 
     # Αναζήτηση χρήστη με βάση το username
     user = db.query(User).filter(User.username == login_data.username).first()
 
     # Έλεγχος αν υπάρχει ο χρήστης
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     # Επαλήθευση κωδικού
     try:
         if not verify_password(login_data.password, user.password_hash):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
         # Δημιουργία του JWT Token (βάζουμε το ID του χρήστη στο 'sub')
         access_token = create_access_token(data={"sub": str(user.id)})
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail="Some error occurred during password verification"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Some error occurred during password verification"
         )
 
     response = {
