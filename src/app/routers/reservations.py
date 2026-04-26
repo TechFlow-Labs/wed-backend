@@ -51,7 +51,7 @@ def get_pending_reservations(db: Session = Depends(get_session), current_user: U
         
         if current_user.role == "COUPLE":
             reservations_pending = query.filter(Reservations.couple_id == current_user.id, Reservations.status == "PENDING").all()
-        elif current_user.role == "PARTNER":
+        elif current_user.role == "VENDOR":
             reservations_pending = query.filter(Reservations.partner_id == current_user.id, Reservations.status == "PENDING").all()
         else:
             raise HTTPException(status_code=400, detail="User Role not recognized")
@@ -102,7 +102,7 @@ def get_accepted_reservations(db: Session = Depends(get_session), current_user: 
         
         if current_user.role == "COUPLE":
             reservations_accepted = query.filter(Reservations.couple_id == current_user.id, Reservations.status == "ACCEPTED").all()
-        elif current_user.role == "PARTNER":
+        elif current_user.role == "VENDOR":
             reservations_accepted = query.filter(Reservations.partner_id == current_user.id, Reservations.status == "ACCEPTED").all()
         else:
             raise HTTPException(status_code=400, detail="User Role not recognized")
@@ -212,7 +212,7 @@ def create_guest_request_for_reservation(reservation_data: ReservationPendingCre
     try:
         partner_exists = db.query(User).filter(
             User.id == reservation_data.partner_id, 
-            User.role == 'PARTNER'
+            User.role == 'VENDOR'
         ).first()
         
         if not partner_exists:
@@ -251,7 +251,7 @@ def create_request_for_reservation(reservation_data: ReservationPendingCreateSch
 
         partner_exists = db.query(User).filter(
             User.id == reservation_data.partner_id, 
-            User.role == 'PARTNER'
+            User.role == 'VENDOR'
         ).first()
         
         if not partner_exists:
@@ -285,7 +285,7 @@ def create_accepted_reservation(reservation_data: ReservationAcceptedCreateSchem
     
     try:
 
-        if current_user.role != "PARTNER":
+        if current_user.role != "VENDOR":
             raise HTTPException(status_code=403, detail="Role not authorized to create this type of reservation")
 
         new_reservation = Reservations(

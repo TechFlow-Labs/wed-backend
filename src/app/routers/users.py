@@ -65,7 +65,7 @@ def update_my_profile(profile_update: UserProfileUpdateSchema, db: Session = Dep
     
     if provided_partner_fields:
         # Security check: Make sure Couples aren't trying to update business fields
-        if current_user.role != "PARTNER":
+        if current_user.role != "VENDOR":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, 
                 detail="Couples cannot update business profile fields."
