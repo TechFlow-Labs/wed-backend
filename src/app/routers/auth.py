@@ -91,7 +91,7 @@ def create_vendor_account(vendor_data: VendorCreateRequest, db: Session = Depend
         password_hash=hashed_pwd,
         first_name=vendor_data.first_name,
         last_name=vendor_data.last_name,
-        role="VENDOR" # Hardcoded, so the admin can't accidentally make another admin
+        role="PARTNER" # Hardcoded, so the admin can't accidentally make another admin
     )
 
     try:
