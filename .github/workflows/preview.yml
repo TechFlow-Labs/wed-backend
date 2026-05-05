@@ -9,15 +9,14 @@ on:
   pull_request:
     types: [closed]
 
-# One run per branch at a time; never cancel in-progress (avoids torn deployments).
 concurrency:
-  group: preview-${{ github.head_ref || github.ref_name || github.event.ref }}
+  group: preview-backend-${{ github.head_ref || github.ref_name || github.event.ref }}
   cancel-in-progress: false
 
 jobs:
-  # ── Deploy ────────────────────────────────────────────────────────────────
+  # ── Deploy ───────────────────────────────────────────────────────────────
   deploy:
-    name: Deploy preview
+    name: Deploy backend preview
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
@@ -34,30 +33,11 @@ jobs:
             | sed 's/[^a-z0-9]/-/g' \
             | sed 's/-\+/-/g' \
             | sed 's/^-//;s/-$//')
-          echo "branch=$BRANCH"          >> "$GITHUB_OUTPUT"
-          echo "slug=$SLUG"             >> "$GITHUB_OUTPUT"
-          echo "app_name=preview-$SLUG" >> "$GITHUB_OUTPUT"
+          echo "slug=${SLUG}"                                           >> "$GITHUB_OUTPUT"
+          echo "app_name=backend-prev-${SLUG}"                         >> "$GITHUB_OUTPUT"
+          echo "fqdn=https://${SLUG}-api.${{ vars.PREVIEW_DOMAIN }}"   >> "$GITHUB_OUTPUT"
 
-      # Check which repos actually have this branch; fall back to main per service.
-      - name: Resolve live branch per service
-        id: branches
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BRANCH="${{ steps.vars.outputs.branch }}"
-
-          branch_or_main() {
-            local repo="$1"
-            gh api "repos/techflow-labs/${repo}/branches/${BRANCH}" \
-              --silent 2>/dev/null && echo "$BRANCH" || echo "main"
-          }
-
-          echo "ssr=$(branch_or_main wed-ssr-mvp)"       >> "$GITHUB_OUTPUT"
-          echo "backend=$(branch_or_main wed-backend)"   >> "$GITHUB_OUTPUT"
-          echo "main_app=$(branch_or_main wed-main-mvp)" >> "$GITHUB_OUTPUT"
-
-      # Find an existing preview app for this branch slug, or create a fresh one.
-      - name: Find or create Coolify preview application
+      - name: Find or create Coolify application
         id: app
         run: |
           APP_NAME="${{ steps.vars.outputs.app_name }}"
@@ -70,20 +50,21 @@ jobs:
 
           if [ -z "$UUID" ]; then
             BODY=$(jq -n \
-              --arg proj  "${{ secrets.COOLIFY_PROJECT_UUID }}" \
-              --arg srv   "${{ secrets.COOLIFY_SERVER_UUID }}" \
-              --arg ghapp "${{ secrets.COOLIFY_GITHUB_APP_UUID }}" \
-              --arg name  "$APP_NAME" \
-              --arg fqdn  "https://${{ steps.vars.outputs.slug }}.${{ vars.PREVIEW_DOMAIN }}" \
+              --arg proj   "${{ secrets.COOLIFY_PROJECT_UUID }}" \
+              --arg srv    "${{ secrets.COOLIFY_SERVER_UUID }}" \
+              --arg ghapp  "${{ secrets.COOLIFY_GITHUB_APP_UUID }}" \
+              --arg branch "${{ github.ref_name }}" \
+              --arg name   "$APP_NAME" \
+              --arg fqdn   "${{ steps.vars.outputs.fqdn }}" \
               '{
                 project_uuid:            $proj,
                 server_uuid:             $srv,
                 environment_name:        "preview",
                 github_app_uuid:         $ghapp,
-                git_repository:          "techflow-labs/wed-ssr-mvp",
-                git_branch:              "main",
+                git_repository:          "techflow-labs/wed-backend",
+                git_branch:              $branch,
                 build_pack:              "docker-compose",
-                docker_compose_location: "/docker-compose.coolify.yml",
+                docker_compose_location: "/docker-compose.preview.yml",
                 name:                    $name,
                 fqdn:                    $fqdn,
                 instant_deploy:          false
@@ -97,9 +78,8 @@ jobs:
             UUID=$(echo "$RESP" | jq -r '.uuid')
           fi
 
-          echo "uuid=$UUID" >> "$GITHUB_OUTPUT"
+          echo "uuid=${UUID}" >> "$GITHUB_OUTPUT"
 
-      # Push all branch + secret env vars as a single bulk update.
       - name: Sync environment variables
         run: |
           curl -sf -X PATCH \
@@ -107,10 +87,6 @@ jobs:
             -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$(jq -n \
-              --arg ssr       "${{ steps.branches.outputs.ssr }}" \
-              --arg backend   "${{ steps.branches.outputs.backend }}" \
-              --arg main_app  "${{ steps.branches.outputs.main_app }}" \
-              --arg gh_token  "${{ secrets.PREVIEW_GITHUB_TOKEN }}" \
               --arg db_pass   "${{ secrets.PREVIEW_DB_PASSWORD }}" \
               --arg db_user   "${{ vars.PREVIEW_DB_USER }}" \
               --arg db_name   "${{ vars.PREVIEW_DB_NAME }}" \
@@ -121,10 +97,6 @@ jobs:
               --arg mail_port "${{ vars.PREVIEW_MAIL_PORT }}" \
               --arg mail_srv  "${{ vars.PREVIEW_MAIL_SERVER }}" \
               '{data: [
-                {key: "SSR_BRANCH",     value: $ssr,       is_build_time: true},
-                {key: "BACKEND_BRANCH", value: $backend,   is_build_time: true},
-                {key: "MAIN_BRANCH",    value: $main_app,  is_build_time: true},
-                {key: "GITHUB_TOKEN",   value: $gh_token,  is_build_time: true},
                 {key: "DB_PASSWORD",    value: $db_pass},
                 {key: "DB_USER",        value: $db_user},
                 {key: "DB_DATABASE",    value: $db_name},
@@ -144,19 +116,14 @@ jobs:
 
       - name: Deployment summary
         run: |
-          echo "### Preview Deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Backend Preview Deployed" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Service    | Branch |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|------------|--------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| SSR (web)  | \`${{ steps.branches.outputs.ssr }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Backend    | \`${{ steps.branches.outputs.backend }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Main (app) | \`${{ steps.branches.outputs.main_app }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**URL:** https://${{ steps.vars.outputs.slug }}.${{ vars.PREVIEW_DOMAIN }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**URL:** ${{ steps.vars.outputs.fqdn }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Branch:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
 
   # ── Cleanup ───────────────────────────────────────────────────────────────
   cleanup:
-    name: Delete preview
+    name: Delete backend preview
     if: |
       (github.event_name == 'delete' && github.event.ref_type == 'branch') ||
       (github.event_name == 'pull_request' && github.event.action == 'closed')
@@ -175,7 +142,7 @@ jobs:
             | sed 's/[^a-z0-9]/-/g' \
             | sed 's/-\+/-/g' \
             | sed 's/^-//;s/-$//')
-          echo "app_name=preview-$SLUG" >> "$GITHUB_OUTPUT"
+          echo "app_name=backend-prev-${SLUG}" >> "$GITHUB_OUTPUT"
 
       - name: Delete Coolify application
         run: |
@@ -191,7 +158,7 @@ jobs:
             curl -sf -X DELETE \
               "${COOLIFY_URL}/api/v1/applications/${UUID}?delete_configurations=true&delete_volumes=true" \
               -H "Authorization: Bearer ${COOLIFY_TOKEN}"
-            echo "Deleted: $APP_NAME ($UUID)"
+            echo "Deleted: ${APP_NAME} (${UUID})"
           else
-            echo "Not found: $APP_NAME (already cleaned up?)"
+            echo "Not found: ${APP_NAME} (already cleaned up?)"
           fi

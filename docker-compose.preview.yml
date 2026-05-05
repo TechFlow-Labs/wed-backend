@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-wedadmin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE:-weddingplan}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./sql/01-wedding-plan-schema-prod.sql:/docker-entrypoint-initdb.d/01-pg-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-wedadmin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [preview-internal]
+
+  api:
+    build:
+      context: src/app
+      dockerfile: Dockerfile.api_prod
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-wedadmin}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE:-weddingplan}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_SERVER: ${MAIL_SERVER}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000"
+    networks:
+      - preview-internal
+      - traefik-public
+
+volumes:
+  db-data:
+
+networks:
+  preview-internal:
+    driver: bridge
+  traefik-public:
+    external: true
+    name: ${TRAEFIK_NETWORK:-coolify}
