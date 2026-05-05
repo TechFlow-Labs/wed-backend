@@ -1,0 +1,36 @@
+name: Preview – Deploy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+jobs:
+  deploy-preview:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set backend branch in Coolify
+        run: |
+          curl -sf -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_APP_UUID }}/envs" \
+            -d "{\"key\":\"BACKEND_BRANCH\",\"value\":\"${{ github.head_ref }}\"}"
+
+      - name: Trigger Coolify redeploy
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_WEBHOOK_TOKEN }}" \
+            "${{ secrets.COOLIFY_WEBHOOK_URL }}"
+
+  reset-branch:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reset backend branch to main in Coolify
+        run: |
+          curl -sf -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_APP_UUID }}/envs" \
+            -d "{\"key\":\"BACKEND_BRANCH\",\"value\":\"main\"}"
