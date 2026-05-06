@@ -1,61 +1,55 @@
-version: '3'
+# Coolify deployment: api (FastAPI) + db (Postgres)
+# Set the following in Coolify environment variables:
+#   POSTGRES_PASSWORD   - required
+#   POSTGRES_DB         - defaults to 'wedding'
+#   POSTGRES_USER       - defaults to 'wedding'
+#   ALLOWED_ORIGINS     - comma-separated frontend URLs, e.g. https://ssr.example.com,https://app.example.com
+#   All other app env vars (DB_HOST, etc.) as needed by your FastAPI app
+#
+# Preview deployments:
+#   Coolify auto-generates a preview FQDN for the 'api' service.
+#   Set API_INTERNAL_URL in wed-ssr-mvp and wed-main-mvp Coolify resources
+#   to point to this service's FQDN (set once per environment in Coolify).
+
 services:
-  wedding-plan-database-local:
-    image: "postgres:15-alpine"
-    hostname: wedding-plan-database-prod
-    container_name: wedding-plan-database-prod
-    env_file:
-      - config/config_db_prod.env
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - coolify
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.wed-backend.rule=Host(`${SERVICE_FQDN_API_8000}`)"
+      - traefik.http.routers.wed-backend.entrypoints=https
+      - traefik.http.routers.wed-backend.tls=true
+      - traefik.http.routers.wed-backend.tls.certresolver=letsencrypt
+      - traefik.http.services.wed-backend.loadbalancer.server.port=8000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wedding}
+      POSTGRES_USER: ${POSTGRES_USER:-wedding}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - ./sql/01-wedding-plan-schema-prod.sql:/docker-entrypoint-initdb.d/01-pg-schema.sql
-      - wedding-plan-database-prod:/var/lib/postgresql/data
-
-    ports:
-      - "5492:5432"
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wedding}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      local_sandbox_2:
-        ipv4_address: 172.27.0.70
-
-    labels:
-      wedding.plan.prod: "database"
-
-  wedding-plan-api-prod:
-    build:
-      context: ./src/app/
-      dockerfile: Dockerfile.api_prod
-    hostname: wedding-plan-api-prod
-    container_name: wedding-plan-api-prod
-    env_file:
-      - config/config_api_prod.env
-    ports:
-      - 8002:8000
-    networks:
-      local_sandbox_2:
-        ipv4_address: 172.27.0.75
-    labels:
-      wedding.plan.prod: "api"
-    tty: true
-
-  wedding-plan-nginx-prod:
-    build: ./nginx/prod/
-    hostname: wedding-plan-nginx-prod
-    container_name: wedding-plan-nginx-prod
-    ports:
-      - "8060:8050"
-    depends_on:
-      - wedding-plan-api-prod
-    networks:
-      local_sandbox_2:
-        ipv4_address: 172.27.0.77
-    labels:
-      wedding.plan.prod: "nginx"
-    tty: true
+      - coolify
 
 volumes:
-  wedding-plan-database-prod:
-    driver: local
+  postgres-data:
 
 networks:
-  local_sandbox_2:
+  coolify:
     external: true
-    name: local_sandbox_2
+    name: coolify
