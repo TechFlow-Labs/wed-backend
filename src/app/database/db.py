@@ -7,20 +7,7 @@ env = Env()
 env.read_env()
 
 
-def _build_database_url() -> str:
-    direct_url = env.str("DATABASE_URL", "")
-    if direct_url:
-        return direct_url
-
-    db_user = env.str("DB_USER", "postgres")
-    db_password = env.str("DB_PASSWORD", "postgres")
-    db_host = env.str("DB_HOST", "postgres")
-    db_port = env.str("DB_PORT", "5432")
-    db_name = env.str("DB_DATABASE", "wedding_plan")
-    return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-
-
-SQLALCHEMY_DATABASE_URL = _build_database_url()
+SQLALCHEMY_DATABASE_URL = f'postgresql://{env.str("DB_USER")}:{env.str("DB_PASSWORD")}@{env.str("DB_HOST")}:{env.str("DB_PORT")}/{env.str("DB_DATABASE")}'
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 

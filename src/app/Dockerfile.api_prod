@@ -34,6 +34,4 @@ RUN cp -r /install/usr/local/bin/* /usr/local/bin/ && \
 
 WORKDIR /app
 
-EXPOSE 8000
-
 ENTRYPOINT ["/bin/bash" , "/app/entrypoint_prod.sh"]
