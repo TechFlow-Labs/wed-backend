@@ -1,61 +1,38 @@
-version: '3'
 services:
-  wedding-plan-database-local:
-    image: "postgres:15-alpine"
-    hostname: wedding-plan-database-prod
-    container_name: wedding-plan-database-prod
-    env_file:
-      - config/config_db_prod.env
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wedding_plan}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
-      - ./sql/01-wedding-plan-schema-prod.sql:/docker-entrypoint-initdb.d/01-pg-schema.sql
+      - ./sql/01-wedding-plan-schema-prod.sql:/docker-entrypoint-initdb.d/01-pg-schema.sql:ro
       - wedding-plan-database-prod:/var/lib/postgresql/data
-
     ports:
       - "5492:5432"
+    restart: unless-stopped
     networks:
-      local_sandbox_2:
-        ipv4_address: 172.27.0.70
+      - app
 
-    labels:
-      wedding.plan.prod: "database"
-
-  wedding-plan-api-prod:
+  backend:
     build:
       context: ./src/app/
       dockerfile: Dockerfile.api_prod
-    hostname: wedding-plan-api-prod
-    container_name: wedding-plan-api-prod
-    env_file:
-      - config/config_api_prod.env
-    ports:
-      - 8002:8000
-    networks:
-      local_sandbox_2:
-        ipv4_address: 172.27.0.75
-    labels:
-      wedding.plan.prod: "api"
-    tty: true
-
-  wedding-plan-nginx-prod:
-    build: ./nginx/prod/
-    hostname: wedding-plan-nginx-prod
-    container_name: wedding-plan-nginx-prod
-    ports:
-      - "8060:8050"
     depends_on:
-      - wedding-plan-api-prod
+      - postgres
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/wedding_plan}
+      PORT: ${PORT:-8000}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8081}
+    ports:
+      - "8002:8000"
+    restart: unless-stopped
     networks:
-      local_sandbox_2:
-        ipv4_address: 172.27.0.77
-    labels:
-      wedding.plan.prod: "nginx"
-    tty: true
+      - app
 
 volumes:
   wedding-plan-database-prod:
-    driver: local
 
 networks:
-  local_sandbox_2:
-    external: true
-    name: local_sandbox_2
+  app:
