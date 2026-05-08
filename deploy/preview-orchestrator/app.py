@@ -54,6 +54,16 @@ class Settings:
 SETTINGS = Settings()
 app = FastAPI(title="Coolify Preview Orchestrator", version="0.1.0")
 
+BACKEND_REQUIRED_ENV_KEYS = [
+    "DB_USER",
+    "DB_PASSWORD",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_DATABASE",
+    "JWT_SECRET_KEY",
+    "JWT_REFRESH_SECRET_KEY",
+]
+
 
 def _sanitize_preview_key(raw: str) -> str:
     key = re.sub(r"[^a-z0-9]+", "-", raw.strip().lower())
@@ -269,7 +279,9 @@ def _deploy(event: PreviewEvent, preview_key: str) -> dict:
         app_uuid, created = _create_or_update_application(spec, preview_key, chosen_branch, event.sha)
 
         env_map: Dict[str, str] = {}
-        if spec.key == "main":
+        if spec.key == "backend":
+            env_map.update(_backend_env_map(preview_key))
+        elif spec.key == "main":
             env_map["EXPO_PUBLIC_API_URL"] = f"https://{api_domain}"
         elif spec.key == "ssr":
             env_map["NEXT_PUBLIC_API_URL"] = f"https://{api_domain}"
@@ -295,6 +307,50 @@ def _deploy(event: PreviewEvent, preview_key: str) -> dict:
         "services": results,
         "fallback_repos": fallback_repos,
     }
+
+
+def _backend_env_map(preview_key: str) -> Dict[str, str]:
+    env_map: Dict[str, str] = {}
+
+    # Required backend envs are sourced from ORCH_BACKEND_<KEY> on orchestrator.
+    missing: List[str] = []
+    for key in BACKEND_REQUIRED_ENV_KEYS:
+        source_key = f"ORCH_BACKEND_{key}"
+        value = os.getenv(source_key, "").strip()
+        if not value:
+            missing.append(source_key)
+            continue
+        env_map[key] = value
+
+    if missing:
+        raise RuntimeError(
+            "Missing required orchestrator env vars for backend preview app: "
+            + ", ".join(missing)
+        )
+
+    # Optional backend settings
+    optional_pairs = {
+        "APP_MODULE": os.getenv("ORCH_BACKEND_APP_MODULE", ""),
+        "ACCESS_TOKEN_EXPIRE_MINUTES": os.getenv("ORCH_BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES", ""),
+        "REFRESH_TOKEN_EXPIRE_MINUTES": os.getenv("ORCH_BACKEND_REFRESH_TOKEN_EXPIRE_MINUTES", ""),
+        "ALGORITHM": os.getenv("ORCH_BACKEND_ALGORITHM", ""),
+        "MAIL_USERNAME": os.getenv("ORCH_BACKEND_MAIL_USERNAME", ""),
+        "MAIL_PASSWORD": os.getenv("ORCH_BACKEND_MAIL_PASSWORD", ""),
+        "MAIL_FROM": os.getenv("ORCH_BACKEND_MAIL_FROM", ""),
+        "MAIL_PORT": os.getenv("ORCH_BACKEND_MAIL_PORT", ""),
+        "MAIL_SERVER": os.getenv("ORCH_BACKEND_MAIL_SERVER", ""),
+        "APP_DOMAIN": f"api-{preview_key}.{SETTINGS.preview_base_domain}",
+    }
+    for key, value in optional_pairs.items():
+        value = value.strip()
+        if value:
+            env_map[key] = value
+
+    # Ensure API binds correctly in container runtime.
+    env_map["API_HOST"] = "0.0.0.0"
+    env_map["API_PORT"] = "8000"
+
+    return env_map
 
 
 def _authorize(authorization: Optional[str]) -> None:

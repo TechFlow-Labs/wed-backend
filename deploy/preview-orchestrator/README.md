@@ -16,6 +16,7 @@ For `action=deploy`:
 1. Sanitizes `preview_key`
 2. Creates or updates 3 Coolify applications (backend/main/ssr) named with the preview key
 3. Sets integration env vars:
+   - `backend`: DB/auth runtime env vars from `ORCH_BACKEND_*` orchestrator envs
    - `main`: `EXPO_PUBLIC_API_URL=https://api-<key>.<preview-base-domain>`
    - `ssr`: `NEXT_PUBLIC_API_URL=https://api-<key>.<preview-base-domain>`
    - `ssr`: `API_INTERNAL_URL=http://wed-preview-backend-<key>:8000`
