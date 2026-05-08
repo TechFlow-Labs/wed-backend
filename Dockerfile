@@ -12,7 +12,8 @@ RUN apt-get update \
 COPY . /app
 
 RUN set -eux; \
-    if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; \
+    if [ -f src/app/requirements.txt ]; then pip install --no-cache-dir -r src/app/requirements.txt; \
+    elif [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; \
     elif [ -f requirements-prod.txt ]; then pip install --no-cache-dir -r requirements-prod.txt; \
     elif [ -f pyproject.toml ]; then \
       pip install --no-cache-dir "uvicorn[standard]" fastapi && pip install --no-cache-dir .; \
