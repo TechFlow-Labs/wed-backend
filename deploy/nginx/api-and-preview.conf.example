@@ -1,0 +1,66 @@
+# Production API
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.wedapp.techflowlabs.gr;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name api.wedapp.techflowlabs.gr;
+
+    ssl_certificate /etc/letsencrypt/live/api.wedapp.techflowlabs.gr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.wedapp.techflowlabs.gr/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:18000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Preview APIs:
+# pr-14.preview.techflowlabs.gr -> 127.0.0.1:18114
+# pr-15.preview.techflowlabs.gr -> 127.0.0.1:18115
+#
+# Rule:
+#   pr-<N>.preview.techflowlabs.gr -> localhost:(18100 + N)
+#
+# This uses nginx map + regex server_name to route all preview subdomains
+# through one server block.
+
+map $host $preview_upstream {
+    default "";
+    ~^pr-(\d+)\.preview\.techflowlabs\.gr$ 127.0.0.1:181$1;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ~^pr-(\d+)\.preview\.techflowlabs\.gr$;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ~^pr-(\d+)\.preview\.techflowlabs\.gr$;
+
+    ssl_certificate /etc/letsencrypt/live/preview.techflowlabs.gr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/preview.techflowlabs.gr/privkey.pem;
+
+    location / {
+        if ($preview_upstream = "") {
+            return 404;
+        }
+        proxy_pass http://$preview_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
