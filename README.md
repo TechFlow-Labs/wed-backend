@@ -1,10 +1,11 @@
-# Wed Backend - Coolify Deployment (Traefik-only)
+# Wed Backend - Coolify Deployment (Host Nginx + Coolify)
 
 This repository includes a Coolify-ready Docker Compose stack for:
 - `api` (Python FastAPI/Uvicorn)
 - `postgres` (PostgreSQL 16)
 
-No Nginx layer is used. Coolify already manages ingress/TLS through Traefik.
+This setup is designed for servers where host Nginx already owns ports `80/443`.
+The API is published only on localhost and host Nginx proxies public traffic to it.
 
 ## Files
 
@@ -35,18 +36,45 @@ Update at minimum:
 1. Create a new **Docker Compose** service from this repo.
 2. Set compose file to `docker-compose.coolify.yml`.
 3. Add/confirm env files or equivalent key-value variables in Coolify.
-4. Attach a domain matching `APP_DOMAIN`.
+4. Do not attach a Coolify domain for this service.
 5. Deploy.
 
-## 3) Domain and Traefik routing
+## 3) Host Nginx routing
 
-Traefik labels are defined on the `api` service:
-- Router rule: `Host(${APP_DOMAIN})`
-- EntryPoint: `websecure`
-- TLS: enabled
-- Upstream port: `${API_PORT}` (default `8000`)
+The API container is published to host loopback only:
+- `127.0.0.1:18000 -> container:8000`
 
-This is enough for Coolify-managed HTTPS routing without Nginx.
+Configure host Nginx with:
+
+```nginx
+server {
+    listen 80;
+    server_name api.wedapp.techflowlabs.gr;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.wedapp.techflowlabs.gr;
+
+    ssl_certificate /etc/letsencrypt/live/api.wedapp.techflowlabs.gr/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.wedapp.techflowlabs.gr/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:18000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Apply config:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
 
 ## 4) Validation
 
@@ -64,8 +92,8 @@ docker compose -f docker-compose.coolify.yml ps
 docker compose -f docker-compose.coolify.yml logs api --tail=100
 ```
 
-## Why Traefik-only
+## Why host Nginx mode
 
-- Coolify already integrates with Traefik for ingress and TLS.
-- Removing Nginx avoids duplicate proxy configuration and an extra network hop.
-- Fewer moving parts means simpler operations and easier debugging on a self-hosted VPS.
+- Keeps your existing Nginx edge setup intact.
+- Avoids host port 80/443 conflicts with Coolify Traefik.
+- Lets Coolify manage app containers while Nginx manages public TLS/ingress.
