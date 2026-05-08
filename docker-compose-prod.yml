@@ -1,0 +1,55 @@
+# Coolify deployment: api (FastAPI) + db (Postgres)
+# Set the following in Coolify environment variables:
+#   POSTGRES_PASSWORD   - required
+#   POSTGRES_DB         - defaults to 'wedding'
+#   POSTGRES_USER       - defaults to 'wedding'
+#   ALLOWED_ORIGINS     - comma-separated frontend URLs, e.g. https://ssr.example.com,https://app.example.com
+#   All other app env vars (DB_HOST, etc.) as needed by your FastAPI app
+#
+# Preview deployments:
+#   Coolify auto-generates a preview FQDN for the 'api' service.
+#   Set API_INTERNAL_URL in wed-ssr-mvp and wed-main-mvp Coolify resources
+#   to point to this service's FQDN (set once per environment in Coolify).
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - coolify
+    labels:
+      - traefik.enable=true
+      - "traefik.http.routers.wed-backend.rule=Host(`${SERVICE_FQDN_API_8000}`)"
+      - traefik.http.routers.wed-backend.entrypoints=https
+      - traefik.http.routers.wed-backend.tls=true
+      - traefik.http.routers.wed-backend.tls.certresolver=letsencrypt
+      - traefik.http.services.wed-backend.loadbalancer.server.port=8000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wedding}
+      POSTGRES_USER: ${POSTGRES_USER:-wedding}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - ./sql/01-wedding-plan-schema-prod.sql:/docker-entrypoint-initdb.d/01-pg-schema.sql
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wedding}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coolify
+
+volumes:
+  postgres-data:
+
+networks:
+  coolify:
+    external: true
+    name: coolify
