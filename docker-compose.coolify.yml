@@ -38,6 +38,7 @@ services:
       start_period: 15s
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./sql/01-wedding-plan-schema.sql:/docker-entrypoint-initdb.d/01-wedding-plan-schema.sql:ro
     networks:
       - app_net
 

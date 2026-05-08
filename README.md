@@ -6,6 +6,7 @@ This repository includes a Coolify-ready Docker Compose stack for:
 
 This setup is designed for servers where host Nginx already owns ports `80/443`.
 The API is published only on localhost and host Nginx proxies public traffic to it.
+Postgres auto-initializes from `sql/01-wedding-plan-schema.sql` on first database creation.
 
 ## Files
 
@@ -84,6 +85,8 @@ Validate compose locally:
 docker compose --env-file .env.coolify --env-file .env.db.coolify -f docker-compose.coolify.yml config
 ```
 
+If Postgres already has an existing volume, init SQL will not re-run automatically.
+
 Optional local smoke test:
 
 ```bash
@@ -97,3 +100,32 @@ docker compose -f docker-compose.coolify.yml logs api --tail=100
 - Keeps your existing Nginx edge setup intact.
 - Avoids host port 80/443 conflicts with Coolify Traefik.
 - Lets Coolify manage app containers while Nginx manages public TLS/ingress.
+
+## Preview Deployments (Host Nginx)
+
+Use this convention for preview APIs:
+- Domain: `pr-<N>.preview.techflowlabs.gr`
+- API host port: `127.0.0.1:181<N>:8000`
+
+Examples:
+- `pr-14.preview.techflowlabs.gr` -> `127.0.0.1:18114:8000`
+- `pr-15.preview.techflowlabs.gr` -> `127.0.0.1:18115:8000`
+
+Requirements:
+- Wildcard DNS: `*.preview.techflowlabs.gr` -> VPS IP.
+- TLS cert covering previews (wildcard recommended): `*.preview.techflowlabs.gr`.
+- Nginx config from `deploy/nginx/api-and-preview.conf.example`.
+
+For each preview deployment in Coolify:
+1. Keep Coolify domain routing disabled for the service.
+2. Publish API port on localhost with the preview-specific port:
+   - `127.0.0.1:181<N>:8000`
+3. Redeploy preview.
+
+Apply Nginx:
+
+```bash
+sudo cp deploy/nginx/api-and-preview.conf.example /etc/nginx/sites-available/wed-api
+sudo ln -s /etc/nginx/sites-available/wed-api /etc/nginx/sites-enabled/wed-api
+sudo nginx -t && sudo systemctl reload nginx
+```
