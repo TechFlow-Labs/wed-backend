@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -6,10 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates gcc libpq-dev \
+    && apt-get install -y --no-install-recommends ca-certificates gcc build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /app
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 RUN set -eux; \
     if [ -f src/app/requirements.txt ]; then pip install --no-cache-dir -r src/app/requirements.txt; \
