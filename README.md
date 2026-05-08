@@ -28,7 +28,7 @@ Update at minimum:
 - `JWT_REFRESH_SECRET_KEY`
 - `POSTGRES_PASSWORD`
 - `DB_PASSWORD` (must match `POSTGRES_PASSWORD`)
-- `APP_MODULE` (if your FastAPI app is not at `app.main:app`)
+- `APP_MODULE` (if your FastAPI app is not at `app:app`)
 
 ## 2) Create service in Coolify
 

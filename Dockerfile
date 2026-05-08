@@ -20,10 +20,11 @@ RUN set -eux; \
       pip install --no-cache-dir "uvicorn[standard]" fastapi; \
     fi
 
-ENV API_HOST=0.0.0.0 \
+ENV PYTHONPATH=/app/src/app \
+    API_HOST=0.0.0.0 \
     API_PORT=8000 \
-    APP_MODULE=app.main:app
+    APP_MODULE=app:app
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn ${APP_MODULE} --host ${API_HOST} --port ${API_PORT}"]
+CMD ["sh", "-c", "cd /app/src/app && uvicorn ${APP_MODULE} --host ${API_HOST} --port ${API_PORT}"]
