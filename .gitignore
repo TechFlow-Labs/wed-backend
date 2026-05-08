@@ -136,6 +136,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env.coolify
+.env.db.coolify
 .envrc
 .venv
 env/
