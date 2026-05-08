@@ -22,10 +22,7 @@ services:
       - app_net
     labels:
       - traefik.enable=true
-      - traefik.http.routers.wed-backend.rule=Host(`${APP_DOMAIN}`)
-      - traefik.http.routers.wed-backend.entrypoints=websecure
-      - traefik.http.routers.wed-backend.tls=true
-      - traefik.http.services.wed-backend.loadbalancer.server.port=${API_PORT:-8000}
+      - coolify.managed=true
 
   postgres:
     image: postgres:16-alpine
