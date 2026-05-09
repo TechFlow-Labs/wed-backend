@@ -247,7 +247,7 @@ def _sync_env(uuid: str, env_map: Dict[str, str]) -> None:
         payload = {
             "key": key,
             "value": value,
-            "is_preview": True,
+            "is_preview": False,
             "is_literal": True,
             "is_multiline": False,
             "is_shown_once": False,
