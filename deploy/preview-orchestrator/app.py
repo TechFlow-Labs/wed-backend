@@ -186,6 +186,10 @@ def _domain(spec: ServiceSpec, preview_key: str) -> str:
     return f"{spec.domain_prefix}-{preview_key}.{SETTINGS.preview_base_domain}"
 
 
+def _domain_url(spec: ServiceSpec, preview_key: str) -> str:
+    return f"https://{_domain(spec, preview_key)}"
+
+
 def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: str, sha: str) -> Tuple[str, bool]:
     if not SETTINGS.coolify_project_uuid or not SETTINGS.coolify_destination_uuid:
         raise RuntimeError("COOLIFY_PROJECT_UUID and COOLIFY_DESTINATION_UUID are required")
@@ -203,7 +207,7 @@ def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: s
         "git_branch": branch,
         "build_pack": "dockerfile",
         "name": name,
-        "domains": domain,
+        "domains": _domain_url(spec, preview_key),
         "ports_exposes": spec.port,
         "dockerfile_location": spec.dockerfile_location,
         "is_force_https_enabled": True,
