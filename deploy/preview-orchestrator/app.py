@@ -244,18 +244,22 @@ def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: s
 
 def _sync_env(uuid: str, env_map: Dict[str, str]) -> None:
     for key, value in env_map.items():
-        _coolify_request(
-            "PATCH",
-            f"/api/v1/applications/{uuid}/envs",
-            json={
-                "key": key,
-                "value": value,
-                "is_preview": True,
-                "is_literal": True,
-                "is_multiline": False,
-                "is_shown_once": False,
-            },
-        )
+        payload = {
+            "key": key,
+            "value": value,
+            "is_preview": True,
+            "is_literal": True,
+            "is_multiline": False,
+            "is_shown_once": False,
+        }
+        try:
+            _coolify_request("PATCH", f"/api/v1/applications/{uuid}/envs", json=payload)
+        except RuntimeError as err:
+            # Coolify returns 404 when PATCH targets a non-existing env key.
+            # Fall back to create operation.
+            if "Environment variable not found" not in str(err):
+                raise
+            _coolify_request("POST", f"/api/v1/applications/{uuid}/envs", json=payload)
 
 
 def _trigger_deploy(uuid: str) -> dict:
