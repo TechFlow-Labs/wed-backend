@@ -3,12 +3,15 @@ name: Coolify Preview Orchestrator
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  push:
+    branches:
+      - '**'
 
 permissions:
   contents: read
 
 concurrency:
-  group: coolify-preview-${{ github.event.pull_request.head.ref }}
+  group: coolify-preview-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -17,6 +20,14 @@ jobs:
     env:
       ORCHESTRATOR_URL: ${{ secrets.PREVIEW_ORCHESTRATOR_URL }}
       ORCHESTRATOR_TOKEN: ${{ secrets.PREVIEW_ORCHESTRATOR_TOKEN }}
+      EVENT_NAME: ${{ github.event_name }}
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+      PR_NUMBER: ${{ github.event.pull_request.number || 0 }}
+      BASE_BRANCH: ${{ github.event.pull_request.base.ref || '' }}
+      EVENT_ACTION: ${{ github.event.action || 'push' }}
+      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      ACTOR: ${{ github.actor }}
+      REPOSITORY: ${{ github.repository }}
     steps:
       - name: Validate orchestrator configuration
         run: |
@@ -30,13 +41,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          RAW="${{ github.event.pull_request.head.ref }}"
+          RAW="$BRANCH_NAME"
           KEY=$(echo "$RAW" \
             | tr '[:upper:]' '[:lower:]' \
             | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-+/-/g')
 
           if [ -z "$KEY" ]; then
-            KEY="pr-${{ github.event.pull_request.number }}"
+            KEY="pr-${PR_NUMBER:-0}"
           fi
 
           echo "preview_key=$KEY" >> "$GITHUB_OUTPUT"
@@ -45,14 +56,11 @@ jobs:
         id: action
         shell: bash
         run: |
-          case "${{ github.event.action }}" in
-            closed)
-              echo "action=teardown" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "action=deploy" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "$EVENT_ACTION" = "closed" ]; then
+            echo "action=teardown" >> "$GITHUB_OUTPUT"
+          else
+            echo "action=deploy" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Notify preview orchestrator
         shell: bash
@@ -63,13 +71,13 @@ jobs:
           {
             "action": "${{ steps.action.outputs.action }}",
             "preview_key": "${{ steps.key.outputs.preview_key }}",
-            "trigger_repo": "${{ github.repository }}",
-            "pull_request_number": ${{ github.event.pull_request.number }},
-            "branch": "${{ github.event.pull_request.head.ref }}",
-            "base_branch": "${{ github.event.pull_request.base.ref }}",
-            "sha": "${{ github.event.pull_request.head.sha }}",
-            "actor": "${{ github.actor }}",
-            "event_action": "${{ github.event.action }}"
+            "trigger_repo": "$REPOSITORY",
+            "pull_request_number": ${PR_NUMBER:-0},
+            "branch": "$BRANCH_NAME",
+            "base_branch": "$BASE_BRANCH",
+            "sha": "$SHA",
+            "actor": "$ACTOR",
+            "event_action": "$EVENT_ACTION"
           }
           JSON
           )
