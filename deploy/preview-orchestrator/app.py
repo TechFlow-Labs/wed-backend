@@ -198,7 +198,7 @@ def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: s
     domain = _domain(spec, preview_key)
     app_obj = _application_by_name(name)
 
-    payload = {
+    create_payload = {
         "project_uuid": SETTINGS.coolify_project_uuid,
         "environment_name": SETTINGS.coolify_environment_name,
         "destination_uuid": SETTINGS.coolify_destination_uuid,
@@ -216,12 +216,26 @@ def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: s
         "instant_deploy": False,
     }
 
+    update_payload = {
+        "git_repository": spec.repo_url,
+        "git_branch": branch,
+        "build_pack": "dockerfile",
+        "name": name,
+        "domains": _domain_url(spec, preview_key),
+        "ports_exposes": spec.port,
+        "dockerfile_location": spec.dockerfile_location,
+        "is_force_https_enabled": True,
+        "force_domain_override": True,
+        "git_commit_sha": sha,
+        "instant_deploy": False,
+    }
+
     if app_obj:
         uuid = app_obj["uuid"]
-        _coolify_request("PATCH", f"/api/v1/applications/{uuid}", json=payload)
+        _coolify_request("PATCH", f"/api/v1/applications/{uuid}", json=update_payload)
         return uuid, False
 
-    created = _coolify_request("POST", "/api/v1/applications/public", json=payload)
+    created = _coolify_request("POST", "/api/v1/applications/public", json=create_payload)
     uuid = created.get("uuid")
     if not uuid:
         raise RuntimeError(f"Coolify did not return application uuid for {name}")
