@@ -32,6 +32,7 @@ See `.env.example`.
 
 Important:
 - `COOLIFY_PROJECT_UUID` and `COOLIFY_DESTINATION_UUID` must point to the target project/server destination.
+- `COOLIFY_SERVER_UUID` should be set for Coolify versions that require `server_uuid` in create/update payloads.
 - `PREVIEW_BASE_DOMAIN` should have a wildcard DNS record: `*.preview-base-domain` -> Coolify server.
 
 ## Run locally

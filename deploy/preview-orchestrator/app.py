@@ -37,6 +37,7 @@ class Settings:
     coolify_project_uuid = os.getenv("COOLIFY_PROJECT_UUID", "")
     coolify_environment_name = os.getenv("COOLIFY_ENVIRONMENT_NAME", "production")
     coolify_destination_uuid = os.getenv("COOLIFY_DESTINATION_UUID", "")
+    coolify_server_uuid = os.getenv("COOLIFY_SERVER_UUID", "")
     preview_base_domain = os.getenv("PREVIEW_BASE_DOMAIN", "preview.techflowlabs.gr")
     shared_secret = os.getenv("PREVIEW_ORCHESTRATOR_TOKEN", "")
     request_timeout_seconds = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "25"))
@@ -197,6 +198,7 @@ def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: s
         "project_uuid": SETTINGS.coolify_project_uuid,
         "environment_name": SETTINGS.coolify_environment_name,
         "destination_uuid": SETTINGS.coolify_destination_uuid,
+        "server_uuid": SETTINGS.coolify_server_uuid or SETTINGS.coolify_destination_uuid,
         "git_repository": spec.repo_url,
         "git_branch": branch,
         "build_pack": "dockerfile",
