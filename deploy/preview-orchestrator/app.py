@@ -403,6 +403,19 @@ def preview_events(payload: PreviewEvent, authorization: Optional[str] = Header(
             result = _teardown(preview_key)
             return {"ok": True, "action": "teardown", "preview_key": preview_key, **result}
 
+        # On PR synchronize (new commit pushed), rebuild from a clean slate:
+        # delete existing preview apps for this preview key, then recreate/redeploy.
+        if payload.event_action == "synchronize":
+            teardown_result = _teardown(preview_key)
+            deploy_result = _deploy(payload, preview_key)
+            return {
+                "ok": True,
+                "action": "deploy",
+                "mode": "teardown_then_deploy",
+                "teardown": teardown_result,
+                **deploy_result,
+            }
+
         result = _deploy(payload, preview_key)
         return {"ok": True, "action": "deploy", **result}
     except RuntimeError as err:
