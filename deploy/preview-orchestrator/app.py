@@ -25,6 +25,7 @@ class ServiceSpec:
     key: str
     app_name_prefix: str
     repo_url: str
+    base_directory: str
     dockerfile_location: str
     port: str
     domain_prefix: str
@@ -152,6 +153,7 @@ def _build_service_specs(preview_key: str) -> List[ServiceSpec]:
             key="backend",
             app_name_prefix="wed-preview-backend",
             repo_url=SETTINGS.backend_repo_url,
+            base_directory="/",
             dockerfile_location="/Dockerfile",
             port="8000",
             domain_prefix="api",
@@ -161,6 +163,7 @@ def _build_service_specs(preview_key: str) -> List[ServiceSpec]:
             key="main",
             app_name_prefix="wed-preview-main",
             repo_url=SETTINGS.main_repo_url,
+            base_directory="/",
             dockerfile_location="/Dockerfile",
             port="3000",
             domain_prefix="main",
@@ -170,6 +173,7 @@ def _build_service_specs(preview_key: str) -> List[ServiceSpec]:
             key="ssr",
             app_name_prefix="wed-preview-ssr",
             repo_url=SETTINGS.ssr_repo_url,
+            base_directory="/",
             dockerfile_location="/Dockerfile",
             port="3005",
             domain_prefix="ssr",
@@ -209,6 +213,7 @@ def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: s
         "name": name,
         "domains": _domain_url(spec, preview_key),
         "ports_exposes": spec.port,
+        "base_directory": spec.base_directory,
         "dockerfile_location": spec.dockerfile_location,
         "is_force_https_enabled": False,
         "force_domain_override": True,
@@ -223,6 +228,7 @@ def _create_or_update_application(spec: ServiceSpec, preview_key: str, branch: s
         "name": name,
         "domains": _domain_url(spec, preview_key),
         "ports_exposes": spec.port,
+        "base_directory": spec.base_directory,
         "dockerfile_location": spec.dockerfile_location,
         "is_force_https_enabled": False,
         "force_domain_override": True,
@@ -290,7 +296,7 @@ def _teardown(preview_key: str) -> dict:
 
 
 def _deploy(event: PreviewEvent, preview_key: str) -> dict:
-    api_domain = _domain(ServiceSpec("backend", "", "", "", "", "api", ""), preview_key)
+    api_domain = _domain(ServiceSpec("backend", "", "", "", "", "", "api", ""), preview_key)
 
     results = []
     fallback_repos = []
