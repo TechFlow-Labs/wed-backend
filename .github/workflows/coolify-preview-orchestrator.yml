@@ -3,10 +3,6 @@ name: Coolify Preview Orchestrator
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
-  push:
-    branches:
-      - '**'
-
 permissions:
   contents: read
 
