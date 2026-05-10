@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database.db import get_session
 from models import Gifts, User
-from schemas.gifts import GiftCreate, GiftDashboard
+from schemas.gifts import GiftCreate, GiftDashboard, GiftListResponse
 from utils.security import get_current_user
 from typing import List
 from uuid import UUID
@@ -46,6 +46,12 @@ def create_gift(gift_in: GiftCreate, db: Session = Depends(get_session), current
 def get_all_gifts(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
     all_gifts = db.query(Gifts).filter(Gifts.user_id == current_user.id).all()
     return all_gifts
+
+
+@router.get("/lists", response_model=GiftListResponse, status_code=status.HTTP_200_OK)
+def get_gift_lists(db: Session = Depends(get_session), current_user: User = Depends(get_current_user)):
+    all_gifts = db.query(Gifts).filter(Gifts.user_id == current_user.id).all()
+    return {"total": len(all_gifts), "items": all_gifts}
 
 
 

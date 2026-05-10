@@ -22,3 +22,8 @@ class GiftCreate(BaseModel):
     long_description: Optional[str] = None
     main_image_url: Optional[str] = None
     gallery_image_urls: List[str] = []
+
+
+class GiftListResponse(BaseModel):
+    total: int
+    items: List[GiftDashboard]
