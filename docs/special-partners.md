@@ -32,3 +32,6 @@ Response body:
 
 ## Preview URL pattern (PR deploy)
 - `https://api-feature-special-partners-page.preview.techflowlabs.gr`
+
+## Chore
+- Added maintenance note for preview branch workflow consistency.
