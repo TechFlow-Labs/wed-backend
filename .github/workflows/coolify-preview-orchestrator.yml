@@ -1,0 +1,90 @@
+name: Coolify Preview Orchestrator
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+permissions:
+  contents: read
+
+concurrency:
+  group: coolify-preview-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: true
+
+jobs:
+  notify-orchestrator:
+    runs-on: ubuntu-latest
+    env:
+      ORCHESTRATOR_URL: ${{ secrets.PREVIEW_ORCHESTRATOR_URL }}
+      ORCHESTRATOR_TOKEN: ${{ secrets.PREVIEW_ORCHESTRATOR_TOKEN }}
+      EVENT_NAME: ${{ github.event_name }}
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+      PR_NUMBER: ${{ github.event.pull_request.number || 0 }}
+      BASE_BRANCH: ${{ github.event.pull_request.base.ref || '' }}
+      EVENT_ACTION: ${{ github.event.action || 'push' }}
+      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      ACTOR: ${{ github.actor }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Validate orchestrator configuration
+        run: |
+          if [ -z "$ORCHESTRATOR_URL" ]; then
+            echo "Missing required secret: PREVIEW_ORCHESTRATOR_URL"
+            exit 1
+          fi
+
+      - name: Compute preview key
+        id: key
+        shell: bash
+        run: |
+          set -euo pipefail
+          RAW="$BRANCH_NAME"
+          KEY=$(echo "$RAW" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-+/-/g')
+
+          if [ -z "$KEY" ]; then
+            KEY="pr-${PR_NUMBER:-0}"
+          fi
+
+          echo "preview_key=$KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Select action
+        id: action
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "$EVENT_ACTION" = "closed" ]; then
+            echo "action=teardown" >> "$GITHUB_OUTPUT"
+          else
+            echo "action=deploy" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notify preview orchestrator
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PAYLOAD=$(cat <<JSON
+          {
+            "action": "${{ steps.action.outputs.action }}",
+            "preview_key": "${{ steps.key.outputs.preview_key }}",
+            "trigger_repo": "$REPOSITORY",
+            "pull_request_number": ${PR_NUMBER:-0},
+            "branch": "$BRANCH_NAME",
+            "base_branch": "$BASE_BRANCH",
+            "sha": "$SHA",
+            "actor": "$ACTOR",
+            "event_action": "$EVENT_ACTION"
+          }
+          JSON
+          )
+
+          if [ -n "$ORCHESTRATOR_TOKEN" ]; then
+            curl -fsSL -X POST "$ORCHESTRATOR_URL" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $ORCHESTRATOR_TOKEN" \
+              --data "$PAYLOAD"
+          else
+            curl -fsSL -X POST "$ORCHESTRATOR_URL" \
+              -H "Content-Type: application/json" \
+              --data "$PAYLOAD"
+          fi
