@@ -4,6 +4,7 @@ from routers import (
     dashboard,
     tasks,
     gifts,
+    gift_lists,
     guests,
     budget,
     reservations,
@@ -20,6 +21,7 @@ app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(tasks.router)
 app.include_router(gifts.router)
+app.include_router(gift_lists.router)
 app.include_router(guests.router)
 app.include_router(budget.router)
 app.include_router(reservations.router)

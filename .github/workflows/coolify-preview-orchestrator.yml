@@ -1,0 +1,31 @@
+name: Preview Deployment
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - master
+  delete:
+  pull_request:
+    types: [closed]
+
+concurrency:
+  group: preview-backend-${{ github.head_ref || github.ref_name || github.event.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy backend preview
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Backend preview orchestrator active for ${{ github.ref_name }}"
+
+  cleanup:
+    name: Cleanup backend preview
+    if: |
+      (github.event_name == 'delete' && github.event.ref_type == 'branch') ||
+      (github.event_name == 'pull_request' && github.event.action == 'closed')
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Backend cleanup orchestrator active for ${{ github.head_ref || github.event.ref }}"
