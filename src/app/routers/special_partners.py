@@ -37,6 +37,7 @@ MOCK_SPECIAL_PARTNERS = [
 ]
 
 
+@router.get("", response_model=SpecialPartnersResponse, status_code=status.HTTP_200_OK)
 @router.get("/", response_model=SpecialPartnersResponse, status_code=status.HTTP_200_OK)
 def get_special_partners():
     return {"items": MOCK_SPECIAL_PARTNERS}

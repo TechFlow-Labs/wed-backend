@@ -29,3 +29,12 @@ def test_get_special_partners_contract():
         "rating",
     }
     assert expected_keys.issubset(first.keys())
+
+
+def test_get_special_partners_contract_without_trailing_slash():
+    app = FastAPI()
+    app.include_router(router)
+    client = TestClient(app)
+
+    response = client.get("/public-api/special-partners")
+    assert response.status_code == 200
