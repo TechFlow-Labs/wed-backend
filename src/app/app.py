@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, dashboard, tasks, gifts, guests, budget, reservations, vendors, notes, users, partner_expenses
+from routers import auth, dashboard, tasks, gifts, guests, budget, reservations, vendors, notes, users, partner_expenses, websites
 
 app = FastAPI(title="Wedding Plan API", version="1.0")
 
@@ -29,3 +29,5 @@ app.include_router(vendors.router)
 app.include_router(notes.router)
 app.include_router(users.router)
 app.include_router(partner_expenses.router)
+
+app.include_router(websites.router)
