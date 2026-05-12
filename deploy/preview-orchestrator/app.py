@@ -8,6 +8,27 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 
+def _normalize_repo_url(raw: str) -> str:
+    """
+    Normalize repository identifiers into a valid git repository URL.
+    Rules:
+    - If already protocol-based (http/https/git@/git://), keep as-is.
+    - If starts with github.com/, add https:// prefix.
+    - Otherwise assume owner/repo and prepend https://github.com/.
+    """
+    value = (raw or "").strip()
+    if not value:
+        return value
+
+    lowered = value.lower()
+    if lowered.startswith(("http://", "https://", "git@", "git://")):
+        return value
+    if lowered.startswith("github.com/"):
+        return f"https://{value}"
+
+    return f"https://github.com/{value.lstrip('/')}"
+
+
 class PreviewEvent(BaseModel):
     action: str = Field(pattern=r"^(deploy|teardown)$")
     preview_key: str
@@ -44,9 +65,15 @@ class Settings:
     request_timeout_seconds = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "25"))
     github_token = os.getenv("GITHUB_TOKEN", "")
 
-    backend_repo_url = os.getenv("BACKEND_REPO_URL", "https://github.com/TechFlow-Labs/wed-backend.git")
-    main_repo_url = os.getenv("MAIN_REPO_URL", "https://github.com/TechFlow-Labs/wed-main-mvp.git")
-    ssr_repo_url = os.getenv("SSR_REPO_URL", "https://github.com/TechFlow-Labs/wed-ssr-mvp.git")
+    backend_repo_url = _normalize_repo_url(
+        os.getenv("BACKEND_REPO_URL", "https://github.com/TechFlow-Labs/wed-backend.git")
+    )
+    main_repo_url = _normalize_repo_url(
+        os.getenv("MAIN_REPO_URL", "https://github.com/TechFlow-Labs/wed-main-mvp.git")
+    )
+    ssr_repo_url = _normalize_repo_url(
+        os.getenv("SSR_REPO_URL", "https://github.com/TechFlow-Labs/wed-ssr-mvp.git")
+    )
 
     backend_fallback_branch = os.getenv("BACKEND_FALLBACK_BRANCH", "main")
     main_fallback_branch = os.getenv("MAIN_FALLBACK_BRANCH", "main")
