@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from datetime import date, datetime
 from typing import List, Optional
 
@@ -39,3 +39,16 @@ class WeddingWebsiteResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RsvpSubmitRequest(BaseModel):
+    guest_name: str = Field(min_length=1, max_length=120)
+    email: EmailStr
+    attending: bool = True
+    guest_count: int = Field(default=1, ge=1, le=20)
+    notes: Optional[str] = Field(default=None, max_length=500)
+
+
+class RsvpSubmitResponse(BaseModel):
+    id: str
+    message: str = "RSVP received."

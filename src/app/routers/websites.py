@@ -1,10 +1,20 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from uuid import uuid4
+
 from fastapi import APIRouter, HTTPException, status
-from schemas.websites import WeddingWebsiteGenerateRequest, WeddingWebsiteResponse, WebsiteScheduleItem, WebsiteFaqItem
+from schemas.websites import (
+    RsvpSubmitRequest,
+    RsvpSubmitResponse,
+    WeddingWebsiteGenerateRequest,
+    WeddingWebsiteResponse,
+    WebsiteFaqItem,
+    WebsiteScheduleItem,
+)
 
 router = APIRouter(prefix="/websites", tags=["Websites"])
 
 WEBSITE_STORE: dict[str, WeddingWebsiteResponse] = {}
+RSVP_STORE: dict[str, list[dict]] = {}
 
 
 def _default_schedule() -> list[WebsiteScheduleItem]:
@@ -48,6 +58,31 @@ def generate_website(payload: WeddingWebsiteGenerateRequest):
     )
     WEBSITE_STORE[payload.slug] = item
     return item
+
+
+@router.post("/{slug}/rsvp", response_model=RsvpSubmitResponse, status_code=status.HTTP_201_CREATED)
+def submit_rsvp(slug: str, body: RsvpSubmitRequest):
+    site = WEBSITE_STORE.get(slug)
+    if not site:
+        raise HTTPException(status_code=404, detail="Wedding website not found")
+    if not site.rsvp_enabled:
+        raise HTTPException(status_code=400, detail="RSVP is not enabled for this wedding")
+    if site.rsvp_deadline and date.today() > site.rsvp_deadline:
+        raise HTTPException(status_code=400, detail="RSVP deadline has passed")
+
+    rsvp_id = str(uuid4())
+    RSVP_STORE.setdefault(slug, []).append(
+        {
+            "id": rsvp_id,
+            "guest_name": body.guest_name,
+            "email": body.email,
+            "attending": body.attending,
+            "guest_count": body.guest_count,
+            "notes": body.notes,
+            "created_at": datetime.utcnow().isoformat() + "Z",
+        }
+    )
+    return RsvpSubmitResponse(id=rsvp_id)
 
 
 @router.get("/{slug}", response_model=WeddingWebsiteResponse)
