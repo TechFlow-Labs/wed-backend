@@ -342,7 +342,8 @@ def _deploy(event: PreviewEvent, preview_key: str) -> dict:
             env_map["EXPO_PUBLIC_API_URL"] = f"https://{api_domain}"
         elif spec.key == "ssr":
             env_map["NEXT_PUBLIC_API_URL"] = f"https://{api_domain}"
-            env_map["API_INTERNAL_URL"] = f"http://wed-preview-backend-{preview_key}:8000"
+            # Use routable preview API domain instead of a fragile internal container hostname.
+            env_map["API_INTERNAL_URL"] = f"https://{api_domain}"
 
         if env_map:
             _sync_env(app_uuid, env_map)
