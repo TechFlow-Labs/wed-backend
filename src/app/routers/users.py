@@ -107,5 +107,7 @@ def update_my_profile(profile_update: UserProfileUpdateSchema, db: Session = Dep
     ).first()
 
 
+    #test n8n !
+    print("TEST PASSED")
 
     return updated_profile
