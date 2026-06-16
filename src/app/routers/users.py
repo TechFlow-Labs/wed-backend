@@ -106,4 +106,7 @@ def update_my_profile(profile_update: UserProfileUpdateSchema, db: Session = Dep
         User.id == current_user.id
     ).first()
 
+
+   
+
     return updated_profile
