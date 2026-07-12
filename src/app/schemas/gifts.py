@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from uuid import UUID
 from typing import List, Optional
 
@@ -9,7 +9,12 @@ class GiftDashboard(BaseModel):
     short_description: Optional[str]
     long_description: Optional[str]
     main_image_url: Optional[str]
-    gallery_image_urls: List[str]
+    gallery_image_urls: List[str] = []
+
+    @field_validator("gallery_image_urls", mode="before")
+    @classmethod
+    def none_to_empty_list(cls, value: List[str] | None) -> List[str]:
+        return value if value is not None else []
 
     class Config:
         from_attributes = True
